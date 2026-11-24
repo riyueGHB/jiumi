@@ -75,7 +75,11 @@ enum class AppSource { STORE, SIDELOADED, PREINSTALLED }
  */
 enum class Risk { LISTED, BACKGROUND,
     /** A core system component, changeable only in expert mode. */
-    CORE }
+    CORE,
+    /** Named in the rules as something the phone needs, changeable only in expert mode. */
+    PROTECTED,
+    /** Holds a default role (home, SMS, phone), changeable only in expert mode. */
+    ROLE }
 
 /** From assets/rules/manage.json: shared identities and packages that are part of the phone. */
 class ManageRules(
@@ -103,16 +107,25 @@ object Management {
     const val FIRST_APP_UID = 10_000
 
     /**
-     * Why [f] is left alone, or null. A core system component is left alone unless [expert] mode is
-     * on, and even then if it is persistent or one of the rules' core packages.
+     * Why [f] is left alone, or null. [expert] mode lets through core components, the rules' protected
+     * packages and default home, SMS and phone apps. What would leave no way back stays refused even
+     * then: Jiumi itself, persistent apps and the rules' core packages, and the keyboard in use.
      */
     fun refusal(f: PackageFacts, rules: ManageRules, self: String, expert: Boolean = false): Refusal? = when {
         f.pkg == self -> Refusal(Refusal.Reason.SELF)
         isCore(f, rules) && !(expert && expertMay(f, rules)) -> Refusal(Refusal.Reason.PLATFORM)
+        KEYBOARD in f.roles -> Refusal(Refusal.Reason.ROLE, KEYBOARD)
+        expert -> null
         f.pkg in rules.protectedPackages -> Refusal(Refusal.Reason.PROTECTED)
         f.roles.isNotEmpty() -> Refusal(Refusal.Reason.ROLE, f.roles.first())
         else -> null
     }
+
+    /** Whether turning on expert mode would let [f] be changed, while it is refused now. */
+    fun expertUnlocks(f: PackageFacts, rules: ManageRules, self: String): Boolean =
+        refusal(f, rules, self) != null && refusal(f, rules, self, expert = true) == null
+
+    private const val KEYBOARD = "keyboard"
 
     /**
      * A removed preinstalled app can only be restored. A suspended or disabled app can be brought back.
@@ -135,6 +148,8 @@ object Management {
      */
     fun risk(f: PackageFacts, rules: ManageRules): Risk? = when {
         isCore(f, rules) -> Risk.CORE
+        f.pkg in rules.protectedPackages -> Risk.PROTECTED
+        f.roles.isNotEmpty() -> Risk.ROLE
         f.pkg in rules.cautionPackages || rules.cautionPrefixes.any { f.pkg.startsWith(it) } -> Risk.LISTED
         f.preinstalled && !f.launchable -> Risk.BACKGROUND
         else -> null

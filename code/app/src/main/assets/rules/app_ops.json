@@ -1,0 +1,15 @@
+{
+  "comment": "App ops shown among an app's permissions, in this order. Each is listed for an app only when the app requests its permission (none: every app), and only when the phone reports it. label is the string appop_<label>; icon is a groupIcon name. Denying sets the op to ignore, so the app is refused quietly.",
+  "ops": [
+    {"op": "READ_CLIPBOARD", "label": "read_clipboard", "icon": "clipboard"},
+    {"op": "RUN_ANY_IN_BACKGROUND", "label": "run_in_background", "icon": "layers"},
+    {"op": "WAKE_LOCK", "permission": "android.permission.WAKE_LOCK", "label": "wake_lock", "icon": "activity"},
+    {"op": "SCHEDULE_EXACT_ALARM", "permission": "android.permission.SCHEDULE_EXACT_ALARM", "label": "exact_alarm", "icon": "activity"},
+    {"op": "SYSTEM_ALERT_WINDOW", "permission": "android.permission.SYSTEM_ALERT_WINDOW", "label": "overlay", "icon": "layers"},
+    {"op": "USE_FULL_SCREEN_INTENT", "permission": "android.permission.USE_FULL_SCREEN_INTENT", "label": "full_screen", "icon": "notifications"},
+    {"op": "REQUEST_INSTALL_PACKAGES", "permission": "android.permission.REQUEST_INSTALL_PACKAGES", "label": "install_apps", "icon": "smartphone"},
+    {"op": "WRITE_SETTINGS", "permission": "android.permission.WRITE_SETTINGS", "label": "write_settings", "icon": "smartphone"},
+    {"op": "MANAGE_EXTERNAL_STORAGE", "permission": "android.permission.MANAGE_EXTERNAL_STORAGE", "label": "all_files", "icon": "image"},
+    {"op": "GET_USAGE_STATS", "permission": "android.permission.PACKAGE_USAGE_STATS", "label": "usage_stats", "icon": "eye"}
+  ]
+}

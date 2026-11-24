@@ -24,8 +24,7 @@ enum class AppLanguage(val tag: String) {
 }
 
 /**
- * Appearance and language. AppCompat applies both to every activity: the theme through the night
- * mode, the language through the application locales, which it also stores.
+ * App-wide preferences. AppCompat applies the theme and stores the application language.
  */
 class AppPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("jiumi_settings", Context.MODE_PRIVATE)
@@ -54,6 +53,14 @@ class AppPreferences(context: Context) {
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(language.tag))
     }
 
+    private val _hideFromRecents = MutableStateFlow(prefs.getBoolean(KEY_HIDE_FROM_RECENTS, false))
+    val hideFromRecents: StateFlow<Boolean> = _hideFromRecents.asStateFlow()
+
+    fun setHideFromRecents(hide: Boolean) {
+        prefs.edit().putBoolean(KEY_HIDE_FROM_RECENTS, hide).apply()
+        _hideFromRecents.value = hide
+    }
+
     private val _setupDone = MutableStateFlow(prefs.getBoolean(KEY_SETUP_DONE, false))
     /** The first-launch setup was finished; until then it is shown in place of the tabs. */
     val setupDone: StateFlow<Boolean> = _setupDone.asStateFlow()
@@ -65,6 +72,7 @@ class AppPreferences(context: Context) {
 
     private companion object {
         const val KEY_THEME = "theme_mode"
+        const val KEY_HIDE_FROM_RECENTS = "hide_from_recents"
         const val KEY_SETUP_DONE = "setup_done"
     }
 }

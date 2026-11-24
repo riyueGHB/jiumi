@@ -237,13 +237,13 @@ internal class ProbeService(
 
     private val appAccess by lazy { AppAccess(context, dataDirectory, packageName) }
 
-    override fun appAccess(packageName: String, uid: Int, action: String, permission: String): String {
+    override fun appAccess(packageName: String, uid: Int, action: String, permission: String, expert: Boolean): String {
         enforceOwner()
         require(PACKAGE_NAME.matches(packageName))
         val user = Binder.getCallingUid() / PER_USER_RANGE
         val token = Binder.clearCallingIdentity()
         return try {
-            appAccess.run(packageName, uid, user, action, permission).toString()
+            appAccess.run(packageName, uid, user, action, permission, expert).toString()
         } finally {
             Binder.restoreCallingIdentity(token)
         }

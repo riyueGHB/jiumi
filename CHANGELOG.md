@@ -4,11 +4,13 @@ Notable changes to Jiumi, newest first. The English in-app update notes come fro
 Chinese in-app notes are supplied when preparing the release.
 Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.6.0] - 2026-11-24
 
-- Fix Wireless debugging pairing getting stuck after authorization expires or a pairing attempt is canceled.
-- Resume interrupted monitoring automatically when Wi-Fi and Wireless debugging become available again and the existing pairing is still valid.
-- Bound Wireless debugging discovery, release multicast resources when it ends, and recover from a damaged local key during re-pairing.
+- **Hide Jiumi from recent apps.** Turn on **Hide task card** in **Settings → Advanced** to avoid swiping Jiumi away by accident. You can still open it from your home screen.
+- **New system switches in Permissions.** Limit supported operations such as clipboard reads and background activity. Re-enabling a switch restores the setting Jiumi saved for that app. Tap a package name to copy it.
+- **Expanded Expert mode.** Manage more default and system apps and change eligible role-granted or shared-UID permissions. Jiumi warns about wider effects and now reads shared-UID permission states more accurately.
+- **Fixed Wireless debugging pairing stalls.** An unfinished monitoring session resumes when Wi-Fi and Wireless debugging return and the existing pairing is still valid.
+- **Fixed an Android 17 monitoring crash** when reading location providers. Per-app network blocking requires Android 14 or later, and Android clears its rules on restart.
 
 ## [0.5.0] - 2026-11-23
 

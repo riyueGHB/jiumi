@@ -60,8 +60,11 @@ interface IProbeService {
      * "receivers" are missing when the system lists no alarm of the app.
      */
     String alarmWakeups(String packageName);
-    /** Reads or changes a single installed app’s access. Returns verified state and operation results. */
-    String appAccess(String packageName, int uid, String action, String permission);
+    /**
+     * Reads or changes a single installed app’s access. Returns verified state and operation results.
+     * [expert] lets through changes that reach past the one app; the result names each in "warn".
+     */
+    String appAccess(String packageName, int uid, String action, String permission, boolean expert);
     /**
      * A package's state for the calling user, read back after a change made outside the monitor (as
      * root). JSON {"installed":bool,"enabled":n,"suspended":bool}, plus "running" when asked for and

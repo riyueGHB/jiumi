@@ -88,7 +88,7 @@ fun AppDetailScreen(
     onBack: () -> Unit,
     onOpenLog: (LogEntry) -> Unit,
     onOpenAppManagement: () -> Unit,
-    onOpenAccess: (Boolean) -> Unit
+    onOpenAccess: (AccessKind) -> Unit
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     // Reload when the range changes or a sync rebuilt the report.
@@ -168,9 +168,11 @@ fun AppDetailScreen(
                     Text(name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold,
                         color = if (badge != null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground,
                         maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(listOfNotNull(summary?.let { kindName(it.kind) }, key.pkg ?: "UID ${key.uid}").joinToString(" · "),
+                    val pkg = key.pkg
+                    Text(listOfNotNull(summary?.let { kindName(it.kind) }, pkg ?: "UID ${key.uid}").joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = if (pkg != null) Modifier.copyOnClick(pkg) else Modifier)
                     // Where it came from: the store by name, installed directly, or part of the phone.
                     facts?.let { f ->
                         val source = when (Management.source(f)) {
@@ -199,10 +201,10 @@ fun AppDetailScreen(
                 Spacer(Modifier.height(16.dp))
                 Card {
                     ListRow(stringResource(R.string.access_permissions), leading = { IconTile(JiumiIcons.Lock) },
-                        onClick = { onOpenAccess(false) }) { Chevron() }
+                        onClick = { onOpenAccess(AccessKind.PERMISSIONS) }) { Chevron() }
                     InsetDivider()
                     ListRow(stringResource(R.string.access_network), leading = { IconTile(JiumiIcons.Network) },
-                        onClick = { onOpenAccess(true) }) { Chevron() }
+                        onClick = { onOpenAccess(AccessKind.NETWORK) }) { Chevron() }
                 }
             }
         }
@@ -468,7 +470,11 @@ private fun ManageBar(controller: MonitorController, m: MonitorController.Manage
         val note = when {
             working -> stringResource(if (monitorRunning) R.string.manage_working else R.string.manage_starting_monitor)
             failureTitle != null -> null
-            m.refusal != null && m.expertUnlocks -> stringResource(R.string.refusal_platform_expert)
+            m.refusal != null && m.expertUnlocks -> when (m.refusal.reason) {
+                Refusal.Reason.PROTECTED -> stringResource(R.string.refusal_protected_expert)
+                Refusal.Reason.ROLE -> stringResource(R.string.refusal_role_expert, roleName(m.refusal.role))
+                else -> stringResource(R.string.refusal_platform_expert)
+            }
             m.refusal != null -> refusalText(m.refusal)
             outcome == null && m.risk != null && m.actions.any { !Management.isUndo(it) } -> stringResource(R.string.risk_note)
             else -> null
@@ -705,6 +711,8 @@ private fun RiskWarning(risk: Risk, modifier: Modifier = Modifier) {
                 Risk.CORE -> R.string.risk_core
                 Risk.LISTED -> R.string.risk_listed
                 Risk.BACKGROUND -> R.string.risk_background
+                Risk.PROTECTED -> R.string.risk_protected
+                Risk.ROLE -> R.string.risk_role
             })),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp))
@@ -717,10 +725,14 @@ private fun refusalText(r: Refusal): String = when (r.reason) {
     Refusal.Reason.SELF -> stringResource(R.string.refusal_self)
     Refusal.Reason.PLATFORM -> stringResource(R.string.refusal_platform)
     Refusal.Reason.PROTECTED -> stringResource(R.string.refusal_protected)
-    Refusal.Reason.ROLE -> stringResource(R.string.refusal_role, stringResource(when (r.role) {
-        "home" -> R.string.role_home
-        "keyboard" -> R.string.role_keyboard
-        "sms" -> R.string.role_sms
-        else -> R.string.role_dialer
-    }))
+    Refusal.Reason.ROLE -> if (r.role == "keyboard") stringResource(R.string.refusal_keyboard)
+        else stringResource(R.string.refusal_role, roleName(r.role))
 }
+
+@Composable
+private fun roleName(role: String?): String = stringResource(when (role) {
+    "home" -> R.string.role_home
+    "keyboard" -> R.string.role_keyboard
+    "sms" -> R.string.role_sms
+    else -> R.string.role_dialer
+})

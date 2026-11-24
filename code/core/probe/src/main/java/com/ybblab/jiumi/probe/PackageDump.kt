@@ -27,6 +27,14 @@ internal class PackageDump(
         val disabledByUser get() = installed && enabled == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER
     }
 
+    data class PermissionGrant(val allowed: Boolean, val flags: Set<String>)
+
+    data class Permissions(
+        val requested: List<String>,
+        val installed: Map<String, PermissionGrant>,
+        val runtime: Map<String, PermissionGrant>
+    )
+
     companion object {
         private val userLine = Regex("User (\\d+): .*\\binstalled=(true|false)\\b.*")
         private val enabled = Regex("\\benabled=(\\d+)\\b")
@@ -34,6 +42,48 @@ internal class PackageDump(
         private const val PROCESS_HEADER = "ACTIVITY MANAGER RUNNING PROCESSES (dumpsys activity processes)"
         private const val PER_USER_RANGE = 100_000
         private val processEntry = Regex("^\\*[A-Z]+\\* UID (\\d+) ProcessRecord\\{\\S+ (\\d+):")
+        private val permissionName = Regex("""[A-Za-z0-9_.]+""")
+        private val grantLine = Regex("""([A-Za-z0-9_.]+): granted=(true|false)(?:, flags=\[(.*)])?""")
+
+        /** Reads the selected package's declared permissions and the grants in effect for its Android user. */
+        fun permissions(dump: String, pkg: String, appId: Int, user: Int): Permissions? {
+            val lines = dump.lines()
+            val packageBlock = lines.section { it == "Packages:" }
+                ?.section { it.startsWith("Package [$pkg] (") } ?: return null
+            val packageUser = packageBlock.section {
+                val fields = userLine.matchEntire(it)?.groupValues ?: return@section false
+                fields[1].toIntOrNull() == user && fields[2] == "true"
+            } ?: return null
+
+            // Android lists runtime permissions held by a shared UID under the shared app ID.
+            val sharedUsers = lines.section { it == "Shared users:" }.orEmpty()
+            val sharedUser = sharedUsers.map(String::trim).filter { it.startsWith("SharedUser [") }
+                .mapNotNull { header -> sharedUsers.section { it == header } }
+                .singleOrNull { section -> section.any { it.trim() == "appId=$appId" } }
+            val runtimeUser = if (sharedUser == null) packageUser else sharedUser.section { it == "User $user:" }.orEmpty()
+            val requested = packageBlock.section { it == "requested permissions:" }.orEmpty()
+                .map(String::trim).filter(permissionName::matches).distinct()
+            return Permissions(
+                requested,
+                readGrants(packageBlock.section { it == "install permissions:" }.orEmpty()),
+                readGrants(runtimeUser.section { it == "runtime permissions:" }.orEmpty())
+            )
+        }
+
+        private fun readGrants(lines: List<String>): Map<String, PermissionGrant> =
+            lines.mapNotNull { line ->
+                val (name, allowed, flags) = grantLine.matchEntire(line.trim())?.destructured ?: return@mapNotNull null
+                name to PermissionGrant(allowed == "true", flags.split('|').map(String::trim).filter(String::isNotEmpty).toSet())
+            }.toMap()
+
+        private fun List<String>.section(heading: (String) -> Boolean): List<String>? {
+            val start = indexOfFirst { heading(it.trim()) }
+            if (start < 0) return null
+            val indent = this[start].indexOfFirst { !it.isWhitespace() }
+            return subList(start + 1, size).takeWhile { line ->
+                line.isBlank() || line.indexOfFirst { !it.isWhitespace() } > indent
+            }
+        }
 
         /** Activity Manager filters this dump by package membership, including custom process names. */
         fun processRunning(dump: String, user: Int): Boolean? {

@@ -286,7 +286,7 @@ class MonitorController(
         val risk = if (refusal == null) Management.risk(facts, manageRules) else null
         val removable = refusal == null && facts.hasCode == true && facts.uid >= 0 && Management.isPackageName(facts.pkg) &&
             facts.preinstalled && facts.installed && !local.value.allowRemovePreinstalled
-        val unlocks = facts.hasCode == true && !expert && refusal?.reason == Refusal.Reason.PLATFORM && Management.expertMay(facts, manageRules)
+        val unlocks = facts.hasCode == true && !expert && Management.expertUnlocks(facts, manageRules, context.packageName)
         val lapsedAt = if (facts.installed && !facts.disabled && !facts.suspendedByShell)
             Freezes.lapsedSince(store.userActions(0, Long.MAX_VALUE, pkg))[pkg] else null
         return Managed(pkg, facts, refusal, actions, backup, risk, removable, unlocks, lapsedAt)
@@ -608,7 +608,7 @@ class MonitorController(
             }
             return@withContext offline.put("rows", org.json.JSONArray(rows))
         }
-        runCatching { org.json.JSONObject(service.appAccess(pkg, key.uid, action, permission)) }.getOrNull()
+        runCatching { org.json.JSONObject(service.appAccess(pkg, key.uid, action, permission, local.value.expertMode)) }.getOrNull()
     }
 
     /** The running monitor, started (or resumed) first when it is not; null when it would not start. */

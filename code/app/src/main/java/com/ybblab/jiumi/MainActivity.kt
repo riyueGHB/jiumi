@@ -4,6 +4,7 @@
 package com.ybblab.jiumi
 
 import android.Manifest
+import android.app.ActivityManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -185,14 +186,16 @@ class MainActivity : AppCompatActivity() {
                         val (uid, pkg) = top.removePrefix("app:").split('|', limit = 2)
                         AppDetailScreen(controller, labels, AppKey(uid.toInt(), pkg.ifEmpty { null }), onBack = pop, onOpenLog = openLog,
                             onOpenAppManagement = { push("settings:${SettingsSection.MANAGEMENT.name}") },
-                            onOpenAccess = { network -> push("access:${if (network) "network" else "permissions"}|${uid}|${pkg}") })
+                            onOpenAccess = { kind -> push("access:${kind.name}|${uid}|${pkg}") })
                     }
                     top.startsWith("apex:") ->
                         SystemModuleScreen(controller, labels, top.removePrefix("apex:"), onBack = pop, onOpenApp = openApp)
                     top.startsWith("access:") -> {
                         val (mode, uid, pkg) = top.removePrefix("access:").split('|', limit = 3)
                         com.ybblab.jiumi.ui.AppAccessScreen(
-                            controller, labels, AppKey(uid.toInt(), pkg), network = mode == "network", onBack = pop
+                            controller, labels, AppKey(uid.toInt(), pkg),
+                            com.ybblab.jiumi.ui.AccessKind.entries.firstOrNull { it.name == mode } ?: com.ybblab.jiumi.ui.AccessKind.PERMISSIONS,
+                            onBack = pop
                         )
                     }
                     top.startsWith("log:") -> {
@@ -209,11 +212,15 @@ class MainActivity : AppCompatActivity() {
                         val section = SettingsSection.entries.firstOrNull { "settings:${it.name}" == top }
                         if (section == null) LaunchedEffect(top) { pop() }
                         else SettingsSectionScreen(
-                            section, controller, onBack = pop,
+                            section, controller, preferences, onBack = pop,
                             onOpenSpool = { push("spool") }, onOpenSessions = { push("sessions") }, onOpenExport = { push("export") },
                             onOpenPairing = { push("pairing") },
                             onOpenNetwork = { push("network-adb") },
                             onOpenMonitoringExclusions = { push("monitoring-exclusions") },
+                            onHideFromRecentsChange = { hide ->
+                                preferences.setHideFromRecents(hide)
+                                applyRecentsVisibility()
+                            },
                             onOpenMonitor = {
                                 (1..stack.size).forEach { pages.removeState(pageKey(it)) }
                                 stack = listOf()
@@ -245,8 +252,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        applyRecentsVisibility()
         controller.onAppResumed()
         controller.refresh()
+    }
+
+    private fun applyRecentsVisibility() {
+        val activityManager = getSystemService(ActivityManager::class.java)
+        activityManager.appTasks.firstOrNull { it.taskInfo?.taskId == taskId }
+            ?.setExcludeFromRecents(preferences.hideFromRecents.value)
     }
 
     override fun onPause() {

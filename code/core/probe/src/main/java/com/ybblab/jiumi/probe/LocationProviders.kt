@@ -29,7 +29,7 @@ internal object LocationProviders {
     private const val SECTION = "Location Providers:"
     private val header = Regex("^(\\w+) provider(?: \\[mock])?:$")
     private val identity = Regex("^identity=(\\d+)/([A-Za-z0-9_.]+)(?:\\[[^]]*])?$")
-    private val service = Regex("^service=\\{([A-Za-z0-9_.]+)/[^}]+}@-?\\d+\\[u\\d+]$")
+    private val service = Regex("^service=\\{([A-Za-z0-9_.]+)/[^}]+\\}@-?\\d+\\[u\\d+\\]$")
 
     /** JSON array of {"name","uid","pkg"}, one per provider whose identity the dump names. */
     fun parse(dump: String, uidOf: (String) -> Int? = { null }): JSONArray {

@@ -596,3 +596,20 @@ fun emphasizeAppName(text: String): androidx.compose.ui.text.AnnotatedString {
         }
     }
 }
+
+/**
+ * Tapping copies [text] to the clipboard. Android 13 and later confirm a copy themselves; older
+ * versions get a short note.
+ */
+@Composable
+fun Modifier.copyOnClick(text: String): Modifier {
+    val context = LocalContext.current
+    val label = stringResource(com.ybblab.jiumi.R.string.copied_package)
+    return clickable(onClickLabel = stringResource(com.ybblab.jiumi.R.string.action_copy)) {
+        context.getSystemService(android.content.ClipboardManager::class.java)
+            ?.setPrimaryClip(android.content.ClipData.newPlainText(text, text))
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+            android.widget.Toast.makeText(context, label, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+}
