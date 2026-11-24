@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: write
+  # 修改 .github/workflows/ 下的文件（哪怕只是改名加 .disabled）都需要这一项
+  workflows: write
 
 # 同一时间只允许一个同步任务，避免两次改动互相打架
 concurrency:
