@@ -326,7 +326,10 @@ fun AppDetailScreen(
         val groupIcons = detail?.groupIcons.orEmpty()
         timelineItems(days, timeline?.records, "app-$category", toggled::toggle) { item, first, last ->
             LogRow(item, routine, recordIcon(item, groupOf, groupIcons), app = null, first = first, last = last,
-                onClick = { onOpenLog(LogEntry(key, item)) })
+                onClick = {
+                    list.requestScrollToItem(0)
+                    onOpenLog(LogEntry(key, item))
+                })
         }
     }
     TimelineScrubber(list, days, Modifier.align(Alignment.CenterEnd).windowInsetsPadding(WindowInsets.safeDrawing)

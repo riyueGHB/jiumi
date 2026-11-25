@@ -431,7 +431,7 @@ internal fun AppListRow(
 
 /** One row of a card built from list items, so a long card scrolls lazily; [first] and [last] round its ends. */
 @Composable
-private fun CardSlice(first: Boolean, last: Boolean, content: @Composable () -> Unit) {
+internal fun CardSlice(first: Boolean, last: Boolean, content: @Composable () -> Unit) {
     val r = AppShapes.CardRadius
     Surface(
         shape = RoundedCornerShape(topStart = if (first) r else 0.dp, topEnd = if (first) r else 0.dp,

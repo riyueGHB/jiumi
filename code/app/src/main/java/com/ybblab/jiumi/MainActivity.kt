@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
@@ -27,15 +28,18 @@ import com.ybblab.jiumi.ui.LogDetailScreen
 import com.ybblab.jiumi.ui.OpenedLogs
 import com.ybblab.jiumi.ui.AppDetailScreen
 import com.ybblab.jiumi.ui.AppLabels
+import com.ybblab.jiumi.ui.AccessKind
 import com.ybblab.jiumi.ui.AttentionScreen
 import com.ybblab.jiumi.ui.ExportScreen
 import com.ybblab.jiumi.ui.GroupScreen
 import com.ybblab.jiumi.ui.HomeScreen
+import com.ybblab.jiumi.ui.TimelineSnapshot
 import com.ybblab.jiumi.ui.LanguageScreen
 import com.ybblab.jiumi.ui.SessionsScreen
 import com.ybblab.jiumi.ui.SettingsScreen
 import com.ybblab.jiumi.ui.SettingsSection
 import com.ybblab.jiumi.ui.MonitoringExclusionsScreen
+import com.ybblab.jiumi.ui.NetworkManagementScreen
 import com.ybblab.jiumi.ui.SettingsSectionScreen
 import com.ybblab.jiumi.ui.SpoolScreen
 import com.ybblab.jiumi.ui.ThemeScreen
@@ -109,16 +113,26 @@ class MainActivity : AppCompatActivity() {
                 var tab by rememberSaveable { mutableStateOf(Tab.MONITOR) }
                 // Each page keeps its own state (scroll, chosen view, filters) while pages above it are open.
                 val pages = rememberSaveableStateHolder()
+                val homeTimeline = remember { TimelineSnapshot<LogEntry>() }
+                val groupTimelines = remember { mutableMapOf<String, TimelineSnapshot<LogEntry>>() }
                 val push = { route: String -> stack = stack + route }
                 // A page's state is keyed by its depth too: the same page can be open twice in the stack.
                 fun pageKey(depth: Int) = "$depth|${stack.getOrNull(depth - 1) ?: "home"}"
+                fun removePage(depth: Int) {
+                    val key = pageKey(depth)
+                    pages.removeState(key)
+                    groupTimelines.remove(key)
+                }
                 val pop = {
                     if (stack.lastOrNull() == "pairing-code") controller.cancelInAppPairing()
-                    pages.removeState(pageKey(stack.size))
+                    removePage(stack.size)
                     stack = stack.dropLast(1)
                 }
                 val openPairingOptions = { push("pairing-options") }
                 val openApp = { key: AppKey -> push("app:${key.uid}|${key.pkg.orEmpty()}") }
+                val openAccess = { key: AppKey, kind: AccessKind ->
+                    push("access:${kind.name}|${key.uid}|${key.pkg.orEmpty()}")
+                }
                 val openLog = { entry: LogEntry -> push("log:${OpenedLogs.put(entry)}") }
                 val top = stack.lastOrNull()
                 val setupDone by preferences.setupDone.collectAsStateWithLifecycle()
@@ -127,7 +141,7 @@ class MainActivity : AppCompatActivity() {
                     val r = route ?: return@LaunchedEffect
                     if (!setupDone) return@LaunchedEffect
                     if (top == "pairing-code") controller.cancelInAppPairing()
-                    (1..stack.size).forEach { pages.removeState(pageKey(it)) }
+                    (1..stack.size).forEach(::removePage)
                     tab = Tab.MONITOR
                     stack = if (r == MonitorNotice.ROUTE_MONITOR) emptyList() else listOf(r)
                     requestedRoute.value = null
@@ -164,6 +178,7 @@ class MainActivity : AppCompatActivity() {
                             Tab.MONITOR -> HomeScreen(
                                 controller = controller,
                                 labels = labels,
+                                timelineSnapshot = homeTimeline,
                                 onOpenGroup = { push("group:$it") },
                                 onOpenAttention = { push("attention:$it") },
                                 onOpenLog = openLog,
@@ -184,9 +199,10 @@ class MainActivity : AppCompatActivity() {
                     }
                     top.startsWith("app:") -> {
                         val (uid, pkg) = top.removePrefix("app:").split('|', limit = 2)
-                        AppDetailScreen(controller, labels, AppKey(uid.toInt(), pkg.ifEmpty { null }), onBack = pop, onOpenLog = openLog,
+                        val key = AppKey(uid.toInt(), pkg.ifEmpty { null })
+                        AppDetailScreen(controller, labels, key, onBack = pop, onOpenLog = openLog,
                             onOpenAppManagement = { push("settings:${SettingsSection.MANAGEMENT.name}") },
-                            onOpenAccess = { kind -> push("access:${kind.name}|${uid}|${pkg}") })
+                            onOpenAccess = { kind -> openAccess(key, kind) })
                     }
                     top.startsWith("apex:") ->
                         SystemModuleScreen(controller, labels, top.removePrefix("apex:"), onBack = pop, onOpenApp = openApp)
@@ -194,7 +210,7 @@ class MainActivity : AppCompatActivity() {
                         val (mode, uid, pkg) = top.removePrefix("access:").split('|', limit = 3)
                         com.ybblab.jiumi.ui.AppAccessScreen(
                             controller, labels, AppKey(uid.toInt(), pkg),
-                            com.ybblab.jiumi.ui.AccessKind.entries.firstOrNull { it.name == mode } ?: com.ybblab.jiumi.ui.AccessKind.PERMISSIONS,
+                            AccessKind.entries.firstOrNull { it.name == mode } ?: AccessKind.PERMISSIONS,
                             onBack = pop
                         )
                     }
@@ -204,7 +220,8 @@ class MainActivity : AppCompatActivity() {
                         if (entry == null) LaunchedEffect(top) { pop() }
                         else LogDetailScreen(controller, labels, entry, onBack = pop, onOpenApp = openApp, onOpenLog = openLog)
                     }
-                    top.startsWith("group:") -> GroupScreen(controller, labels, top.removePrefix("group:"), onBack = pop,
+                    top.startsWith("group:") -> GroupScreen(controller, labels, top.removePrefix("group:"),
+                        groupTimelines.getOrPut(pageKey(stack.size)) { TimelineSnapshot() }, onBack = pop,
                         onOpenLog = openLog, onOpenApp = openApp)
                     top.startsWith("attention:") -> AttentionScreen(controller, labels, top.removePrefix("attention:"), onBack = pop,
                         onOpenApp = { push("app:${it.uid}|${it.pkg.orEmpty()}") })
@@ -217,12 +234,13 @@ class MainActivity : AppCompatActivity() {
                             onOpenPairing = { push("pairing") },
                             onOpenNetwork = { push("network-adb") },
                             onOpenMonitoringExclusions = { push("monitoring-exclusions") },
+                            onOpenNetworkManagement = { push("network-management") },
                             onHideFromRecentsChange = { hide ->
                                 preferences.setHideFromRecents(hide)
                                 applyRecentsVisibility()
                             },
                             onOpenMonitor = {
-                                (1..stack.size).forEach { pages.removeState(pageKey(it)) }
+                                (1..stack.size).forEach(::removePage)
                                 stack = listOf()
                                 tab = Tab.MONITOR
                             }
@@ -236,12 +254,14 @@ class MainActivity : AppCompatActivity() {
                         onOpenWirelessDebugging = ::openPairingSettingsForInAppCode)
                     top == "spool" -> SpoolScreen(controller, onBack = pop)
                     top == "monitoring-exclusions" -> MonitoringExclusionsScreen(controller, labels, onBack = pop)
+                    top == "network-management" -> NetworkManagementScreen(controller, labels,
+                        onOpenApp = { openAccess(it, AccessKind.NETWORK) }, onBack = pop)
                     top == "about" -> AboutScreen(labels, onBack = pop, onOpenLicenses = { push("licenses") })
                     top == "licenses" -> LicensesScreen(onBack = pop, onOpenNotice = { push("notice:$it") })
                     top.startsWith("notice:") -> NoticeScreen(top.removePrefix("notice:").toInt(), onBack = pop)
                     top == "export" -> ExportScreen(controller, labels, onBack = pop)
                     top == "sessions" -> SessionsScreen(controller, onBack = pop, onChosen = {
-                        (1..stack.size).forEach { pages.removeState(pageKey(it)) }; stack = listOf()
+                        (1..stack.size).forEach(::removePage); stack = listOf()
                     })
                     top == "theme" -> ThemeScreen(preferences, onBack = pop)
                     top == "language" -> LanguageScreen(preferences, onBack = pop)

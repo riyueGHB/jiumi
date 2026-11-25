@@ -65,6 +65,8 @@ interface IProbeService {
      * [expert] lets through changes that reach past the one app; the result names each in "warn".
      */
     String appAccess(String packageName, int uid, String action, String permission, boolean expert);
+    /** JSON array of the app's recorded network restrictions for the calling user. */
+    String ownedNetworkRules();
     /**
      * A package's state for the calling user, read back after a change made outside the monitor (as
      * root). JSON {"installed":bool,"enabled":n,"suspended":bool}, plus "running" when asked for and

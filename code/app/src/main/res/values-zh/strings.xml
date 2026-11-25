@@ -56,7 +56,7 @@
     <string name="settings_adb_options">备用连接</string>
     <string name="settings_records">日志</string>
     <string name="settings_records_summary">监测记录、导出与缓冲上限</string>
-    <string name="settings_management_summary">停用与卸载应用</string>
+    <string name="settings_management_summary">管理应用联网、停用与卸载</string>
     <string name="settings_about_summary">版本、更新与开源许可</string>
     <string name="section_appearance">外观</string>
     <string name="settings_theme">主题</string>
@@ -465,7 +465,7 @@
     <string name="state_suspended">已挂起</string>
     <string name="state_deleted">已卸载</string>
     <string name="section_advanced">高级</string>
-    <string name="settings_advanced_summary">专家模式与任务卡片</string>
+    <string name="settings_advanced_summary">隐藏任务卡片与专家模式</string>
     <string name="settings_hide_from_recents">隐藏任务卡片</string>
     <string name="settings_hide_from_recents_desc">开启后，揪咪会从系统最近任务中隐藏。</string>
     <string name="settings_manage_identity">执行身份</string>
@@ -809,7 +809,16 @@
     <string name="appop_write_settings">修改系统设置</string>
     <string name="appop_all_files">访问所有文件</string>
     <string name="appop_usage_stats">读取应用使用情况</string>
-    <string name="access_network_note">使用 Android 14 及以上系统自带的防火墙规则，只作用于这个应用。手机重启后系统会清除这条规则。</string>
+    <string name="access_network_note">使用 Android 14 及以上系统自带的防火墙。手机重启后系统会清除规则，可在「设置 → 应用管理 → 应用联网管理清单」开启自动恢复。</string>
+    <string name="network_management_title">应用联网管理清单</string>
+    <string name="network_management_restore">重启后自动恢复联网限制</string>
+    <string name="network_management_restore_desc">开启后，手机重启并连上监测探针时，揪咪会恢复清单中应用的联网限制。</string>
+    <string name="network_management_empty">在应用的「联网管理」关闭「允许联网」后，应用会自动出现在这里。</string>
+    <string name="network_management_restore_pending">重启后待恢复</string>
+    <string name="network_management_restore_failed">未能确认恢复成功</string>
+    <string name="network_management_not_restored">重启后尚未恢复限制</string>
+    <string name="network_management_status_unknown">当前限制状态未知</string>
+    <string name="network_management_save_error">无法保存联网管理设置。</string>
     <string name="action_copy">复制</string>
     <string name="copied_package">已复制包名</string>
     <string name="access_group_location">位置</string>

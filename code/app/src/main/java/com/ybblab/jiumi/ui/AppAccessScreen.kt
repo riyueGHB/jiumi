@@ -61,6 +61,10 @@ fun AppAccessScreen(controller: MonitorController, labels: AppLabels, key: AppKe
     val scope = rememberCoroutineScope()
     val monitor by controller.state.collectAsStateWithLifecycle()
     val single = kind != AccessKind.PERMISSIONS
+    val management = controller.networkManagement
+    val networkPolicy by management.state.collectAsStateWithLifecycle()
+    val managed = networkPolicy.apps[key.pkg]?.takeIf { single && it.key == key }
+    var policySaveFailed by remember(key, kind) { mutableStateOf(false) }
     val readAction = kind.read
     var state by remember(key, kind) { mutableStateOf<JSONObject?>(null) }
     var pending by remember(key, kind) { mutableStateOf(true) }
@@ -68,9 +72,12 @@ fun AppAccessScreen(controller: MonitorController, labels: AppLabels, key: AppKe
     fun refresh(action: String, permission: String = "") {
         if (pending) return
         pending = true
+        policySaveFailed = false
         lastAction = action to permission
         scope.launch {
-            state = controller.appAccess(key, action, permission)
+            state = controller.appAccess(key, action, permission).also {
+                policySaveFailed = it?.optBoolean("policySaveFailed") == true
+            }
             pending = false
         }
     }
@@ -112,12 +119,23 @@ fun AppAccessScreen(controller: MonitorController, labels: AppLabels, key: AppKe
             opsPending = false
         }
     }
-    LaunchedEffect(key, kind, monitor.running) {
+    LaunchedEffect(key, kind, monitor.running, managed?.verifiedBoot) {
         state = controller.appAccess(key, readAction)
         pending = false
         if (kind == AccessKind.PERMISSIONS) readOps(state)
     }
     val lock = state?.optString("lock").orEmpty()
+    val installedAt = state?.optLong("installedAt")?.takeIf { it > 0 }
+    val trackedInstallation = managed?.takeIf { installedAt == null || it.installedAt == installedAt }
+    val boot = management.boot
+    val restoreStatus = if (trackedInstallation != null && boot != trackedInstallation.verifiedBoot) {
+        when {
+            boot == null -> R.string.network_management_status_unknown
+            trackedInstallation.pkg in networkPolicy.restoreFailures -> R.string.network_management_restore_failed
+            networkPolicy.shouldRestore(trackedInstallation, boot) -> R.string.network_management_restore_pending
+            else -> R.string.network_management_not_restored
+        }
+    } else null
     val groups = remember(context) {
         val rules = JSONObject(context.assets.open("rules/permission_groups.json").bufferedReader().use { it.readText() })
         buildMap {
@@ -194,15 +212,22 @@ fun AppAccessScreen(controller: MonitorController, labels: AppLabels, key: AppKe
             } else GroupTitle(stringResource(R.string.access_scope))
         }
         if (single && (readable || lock.isNotEmpty() && lock != "unknown" && lock != "monitor")) {
-            val allowed = state?.optBoolean("allowed") == true
+            val allowedBySystem = state?.optBoolean("allowed") == true
+            // The switch can clear a saved restriction that's still waiting to be restored.
+            val allowSelected = allowedBySystem && trackedInstallation == null
             Card {
                 ListRow(
                     stringResource(R.string.access_network_allow),
-                    subtitle = if (lock.isEmpty()) stringResource(if (allowed) R.string.access_not_blocked else R.string.access_blocked) else null,
+                    subtitle = if (lock.isEmpty()) {
+                        stringResource(restoreStatus ?: if (allowedBySystem) R.string.access_not_blocked else R.string.access_blocked)
+                    } else null,
+                    subtitleColor = if (restoreStatus == R.string.network_management_restore_failed) StatusWarning else Ink.secondary,
                     leading = { IconTile(JiumiIcons.Network) },
-                    onClick = if (!pending && lock.isEmpty()) ({ refresh(if (allowed) "networkDeny" else "networkAllow") }) else null
+                    onClick = if (!pending && lock.isEmpty()) ({
+                        refresh(if (allowSelected) "networkDeny" else "networkAllow")
+                    }) else null
                 ) {
-                    if (lock.isEmpty()) JiumiSwitch(allowed, enabled = !pending) {
+                    if (lock.isEmpty()) JiumiSwitch(allowSelected, enabled = !pending) {
                         refresh(if (it) "networkAllow" else "networkDeny")
                     } else TrailingValue(stringResource(R.string.access_read_only))
                 }
@@ -288,6 +313,10 @@ fun AppAccessScreen(controller: MonitorController, labels: AppLabels, key: AppKe
                 "external" -> GroupFooter(stringResource(R.string.access_warn_external), warning = true)
                 "chain" -> GroupFooter(stringResource(R.string.access_warn_chain), warning = true)
             }
+        }
+        if (single && policySaveFailed) GroupFooter(stringResource(R.string.network_management_save_error), warning = true)
+        if (restoreStatus != null && (!readable || lock.isNotEmpty())) {
+            GroupFooter(stringResource(restoreStatus), warning = restoreStatus == R.string.network_management_restore_failed)
         }
     }
 }

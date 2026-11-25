@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -77,12 +78,15 @@ fun LogDetailScreen(
     val destinations = destinationsOf(item)
     val segment = item as? TimelineItem.Segment
     val list = rememberLazyListState()
+    val restoringScroll = remember { list.firstVisibleItemIndex > 0 }
     if (segment != null) ObserveTimelineScroll(controller, list)
     val members by produceState<TimelinePages<TimelineItem>?>(null, entry) {
         value = withContext(Dispatchers.Default) { segment?.pages }
     }
 
     SubScreen(recordTitle(item), onBack) { padding ->
+        // The saved position can be in the member rows. Wait for them before measuring that list.
+        if (segment != null && members == null && restoringScroll) return@SubScreen
         LazyColumn(
             state = list,
             modifier = Modifier.fillMaxSize().padding(padding),

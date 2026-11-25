@@ -29,23 +29,13 @@ two figures in one line (or when it began, without a summary); a stop button at 
             android:textSize="12sp" />
     </LinearLayout>
 
-    <Button
+    <ImageButton
         android:id="@+id/notification_stop"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
         android:layout_marginStart="12dp"
         android:background="@drawable/bg_notification_stop"
-        android:drawableStart="@drawable/ic_notification_stop"
-        android:drawablePadding="5dp"
-        android:gravity="center"
-        android:minWidth="0dp"
-        android:minHeight="44dp"
-        android:paddingHorizontal="11dp"
-        android:paddingVertical="4dp"
-        android:singleLine="true"
-        android:fontFamily="sans-serif-medium"
-        android:textAllCaps="false"
-        android:letterSpacing="0"
-        android:textColor="@color/notification_stop_ink"
-        android:textSize="12sp" />
+        android:contentDescription="@string/action_stop_monitoring"
+        android:scaleType="center"
+        android:src="@drawable/ic_notification_stop" />
 </LinearLayout>

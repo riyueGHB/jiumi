@@ -26,7 +26,7 @@ internal class AppAccess(context: Context, directory: File, private val self: St
 
     private data class Target(
         val pkg: String, val uid: Int, val user: Int, val lock: String?, val identity: String, val peers: List<String>,
-        val expert: Boolean, val warn: Set<String>
+        val expert: Boolean, val warn: Set<String>, val installedAt: Long
     )
     /** An app op's mode for the package and for its whole UID, null where none is set. */
     data class OpState(val pkg: String?, val uid: String?) {
@@ -49,17 +49,56 @@ internal class AppAccess(context: Context, directory: File, private val self: St
     fun run(pkg: String, uid: Int, user: Int, action: String, permission: String, expert: Boolean): JSONObject = runCatching {
         require(action in actions)
         val ops = action.startsWith("op")
-        require(permission.isEmpty() || (if (ops) opList else permissionName).matches(permission))
+        val network = action.startsWith("network")
+        if (network && permission.isNotEmpty()) {
+            val installedAt = permission.toLong().also { require(it > 0 && action == "networkDeny") }
+            if (user != 0) return JSONObject().put("lock", "unknown")
+            val installed = try {
+                pm.getPackageInfo(pkg, 0)
+            } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+                return JSONObject().put("stale", true)
+            }
+            if (installed.firstInstallTime != installedAt || installed.applicationInfo?.uid != uid) {
+                return JSONObject().put("stale", true)
+            }
+        } else {
+            require(permission.isEmpty() || (if (ops) opList else permissionName).matches(permission))
+        }
         val target = target(pkg, uid, user, expert) ?: return JSONObject().put("lock", "unknown")
+        if (network && permission.isNotEmpty() && target.installedAt.toString() != permission) {
+            return JSONObject().put("stale", true)
+        }
         val saved = if (ledger.baseFile.exists()) JSONObject(ledger.readFully().decodeToString()) else JSONObject()
         val warn = target.warn.toMutableSet()
         val result = when {
-            action.startsWith("network") -> network(target, saved, action, warn)
+            network -> network(target, saved, action, warn)
             ops -> ops(target, saved, action, permission.split(','))
             else -> permissions(target, saved, action, permission)
         }
         result.put("peers", JSONArray(target.peers)).put("warn", JSONArray(warn.sorted()))
     }.getOrElse { JSONObject().put("lock", "unknown") }
+
+    @Synchronized
+    fun ownedNetworkRules(user: Int): JSONArray {
+        if (user != 0 || !ledger.baseFile.exists()) return JSONArray()
+        val saved = JSONObject(ledger.readFully().decodeToString())
+        return JSONArray().apply {
+            for (key in saved.keys()) {
+                if (!key.startsWith("network:")) continue
+                val parts = key.removePrefix("network:").split(':', limit = 3)
+                if (parts.size != 3) continue
+                val uid = parts[0].toIntOrNull() ?: continue
+                val installedAt = parts[1].toLongOrNull() ?: continue
+                val pkg = parts[2]
+                val recordedBoot = saved.optInt(key, -1)
+                if (recordedBoot < 0 || installedAt <= 0 || target(pkg, uid, user, false)?.identity != key.removePrefix("network:")) continue
+                val current = checkNotNull(firewall(pkg))
+                if (recordedBoot > current.boot.toInt() || recordedBoot.toString() == current.boot && (!current.denied || !current.enabled)) continue
+                put(JSONObject().put("pkg", pkg).put("uid", uid).put("installedAt", installedAt)
+                    .put("blocked", true).put("verifiedBoot", recordedBoot))
+            }
+        }
+    }
 
     private fun command(vararg args: String): String? =
         runCatching { Shell.run(args.toList()) }.getOrNull()?.takeIf { it.exitCode == 0 }?.output?.trimEnd()
@@ -78,8 +117,9 @@ internal class AppAccess(context: Context, directory: File, private val self: St
             else -> null
         }
         val peers = rows.map { it.groupValues[1] }.filter { it != pkg }.distinct().sorted()
-        return Target(pkg, uid, user, lock, "$uid:${info?.firstInstallTime ?: 0}:$pkg", peers, expert,
-            if (shared && lock == null) setOf("shared") else emptySet())
+        val installedAt = info?.firstInstallTime ?: 0
+        return Target(pkg, uid, user, lock, "$uid:$installedAt:$pkg", peers, expert,
+            if (shared && lock == null) setOf("shared") else emptySet(), installedAt)
     }
 
     private fun grants(t: Target): List<Grant>? {
@@ -231,6 +271,8 @@ internal class AppAccess(context: Context, directory: File, private val self: St
         }
         val current = firewall(t.pkg) ?: return JSONObject().put("lock", "unknown")
         return JSONObject().put("lock", lock).put("allowed", !(current.enabled && current.denied))
+            .put("boot", current.boot.toInt()).put("installedAt", t.installedAt)
+            .put("owned", current.denied && saved.optString(owned) == current.boot)
             .put("failed", error || action != "network" && lock != null)
     }
 

@@ -39,10 +39,11 @@ import com.ybblab.jiumi.ui.theme.StatusWarning
  * opening the app's own destinations; its timeline is the other view.
  */
 @Composable
-fun GroupScreen(
+internal fun GroupScreen(
     controller: MonitorController,
     labels: AppLabels,
     groupId: String,
+    timelineSnapshot: TimelineSnapshot<LogEntry>,
     onBack: () -> Unit,
     onOpenLog: (LogEntry) -> Unit,
     onOpenApp: (AppKey) -> Unit = {}
@@ -55,9 +56,10 @@ fun GroupScreen(
     val routineKinds = ledger?.routineKinds.orEmpty()
     val routineKeys = remember(ledger) { ledger?.apps.orEmpty().filter { it.kind.id in routineKinds }.map { it.key }.toSet() }
     val list = rememberLazyListState()
+    val restoringScroll = remember { list.firstVisibleItemIndex > 0 }
     val toggled = rememberToggledDays(groupId, state.range)
     val timeline = if ((network && byApp) || ledger == null) null else {
-        rememberTimeline(controller, ledger.timelineSource, state.shownRange to groupId, list) {
+        rememberTimeline(controller, ledger.timelineSource, state.shownRange to groupId, list, timelineSnapshot) {
             if (network) headOf(it.item) is TimelineItem.NetItem
             else categoryOf(it.item)?.let(ledger.groupOf::get) == groupId
         }
@@ -65,6 +67,7 @@ fun GroupScreen(
     val days = rememberTimelineDays(timeline?.days.orEmpty(), toggled.value)
 
     SubScreen(title, onBack) { padding ->
+        if (!(network && byApp) && timeline == null && timelineSnapshot.index == null && restoringScroll) return@SubScreen
         Box(Modifier.fillMaxSize().padding(padding)) {
         LazyColumn(
             state = list,

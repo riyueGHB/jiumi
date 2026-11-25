@@ -4,6 +4,12 @@ Notable changes to Jiumi, newest first. The English in-app update notes come fro
 Chinese in-app notes are supplied when preparing the release.
 Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.7.0] - 2026-11-25
+
+- The new app network list adds apps when you block network access and removes them when you allow it again. You can choose to restore restrictions when the monitor reconnects after a reboot.
+- The timeline keeps your place when switching between All and Background or returning from grouped activity or network record details.
+- The notification stop button is smaller, the Settings title stays at the top, and Hide task card now appears above Expert mode.
+
 ## [0.6.0] - 2026-11-24
 
 - **Hide Jiumi from recent apps.** Turn on **Hide task card** in **Settings → Advanced** to avoid swiping Jiumi away by accident. You can still open it from your home screen.

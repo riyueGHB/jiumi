@@ -78,7 +78,7 @@ internal fun SettingsScreen(
     val scrolled by remember { androidx.compose.runtime.derivedStateOf { list.canScrollBackward } }
     val update by com.ybblab.jiumi.update.UpdateNotice.available.collectAsStateWithLifecycle()
     val theme by preferences.themeMode.collectAsStateWithLifecycle()
-    HidingTopBar(stringResource(R.string.settings_title), scrolled) { top ->
+    HidingTopBar(stringResource(R.string.settings_title), scrolled, pinned = true) { top ->
         LazyColumn(
             state = list,
             modifier = Modifier.fillMaxSize(),
@@ -148,6 +148,7 @@ internal fun SettingsSectionScreen(
     onOpenPairing: () -> Unit,
     onOpenNetwork: () -> Unit,
     onOpenMonitoringExclusions: () -> Unit,
+    onOpenNetworkManagement: () -> Unit,
     onHideFromRecentsChange: (Boolean) -> Unit,
     onOpenMonitor: () -> Unit
 ) {
@@ -352,6 +353,9 @@ internal fun SettingsSectionScreen(
                                 TrailingValue(stringResource(if (state.manageAsRoot) R.string.manage_identity_root else R.string.manage_identity_shell))
                             }
                             InsetDivider()
+                            ListRow(stringResource(R.string.network_management_title), leading = { IconTile(JiumiIcons.Network) },
+                                onClick = onOpenNetworkManagement) { Chevron() }
+                            InsetDivider()
                             ListRow(
                                 stringResource(R.string.settings_auto_refreeze),
                                 subtitle = stringResource(R.string.settings_auto_refreeze_desc),
@@ -405,9 +409,6 @@ internal fun SettingsSectionScreen(
                     }
                 }
                 SettingsSection.ADVANCED -> item {
-                    Card { ExpertModeRow(state.expertMode, controller::setExpertMode) }
-                    GroupFooter(stringResource(R.string.settings_expert_mode_desc))
-                    Spacer(Modifier.height(16.dp))
                     val hideFromRecents by preferences.hideFromRecents.collectAsStateWithLifecycle()
                     Card {
                         ListRow(
@@ -419,6 +420,9 @@ internal fun SettingsSectionScreen(
                             JiumiSwitch(hideFromRecents, onCheckedChange = onHideFromRecentsChange)
                         }
                     }
+                    Spacer(Modifier.height(16.dp))
+                    Card { ExpertModeRow(state.expertMode, controller::setExpertMode) }
+                    GroupFooter(stringResource(R.string.settings_expert_mode_desc))
                 }
             }
         }

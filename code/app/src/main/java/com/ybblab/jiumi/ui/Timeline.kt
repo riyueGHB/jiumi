@@ -55,17 +55,35 @@ fun MutableState<List<Long>>.toggle(day: Long) {
     value = if (day in value) value - day else value + day
 }
 
+/** A page keeps its displayed rows while a detail is open above it. */
+internal class TimelineSnapshot<T> {
+    var reuseKey: Any? = null
+    var query: Any? = null
+    var source: TimelineSource<T>? = null
+    var index: TimelineIndex<T>? = null
+}
+
 /** Keep the displayed snapshot in place while the user scrolls, even when the probe is reporting. */
 @Composable
 internal fun <T> rememberTimeline(
-    controller: MonitorController, source: TimelineSource<T>, query: Any?, state: LazyListState, matches: (T) -> Boolean
+    controller: MonitorController, source: TimelineSource<T>, query: Any?, state: LazyListState,
+    snapshot: TimelineSnapshot<T>? = null, reuseKey: Any? = query, matches: (T) -> Boolean
 ): TimelineIndex<T>? {
     ObserveTimelineScroll(controller, state)
-    var index by remember(query) { mutableStateOf<TimelineIndex<T>?>(null) }
+    var index by remember(reuseKey) {
+        mutableStateOf(snapshot?.index?.takeIf { snapshot.reuseKey == reuseKey })
+    }
     LaunchedEffect(source, query) {
+        if (index != null && snapshot?.source === source && snapshot.query == query) return@LaunchedEffect
         if (index != null) snapshotFlow { state.isScrollInProgress }.first { !it }
         val next = withContext(Dispatchers.Default) { source.select(matches) }
         if (index != null) snapshotFlow { state.isScrollInProgress }.first { !it }
+        snapshot?.let {
+            it.reuseKey = reuseKey
+            it.query = query
+            it.source = source
+            it.index = next
+        }
         index = next
     }
     return index
@@ -167,11 +185,15 @@ private fun FoldedDay(day: TimelineDay, modifier: Modifier, onOpen: () -> Unit) 
  * finger. The timeline must be the list's last section, so its rows are the last items of [state].
  */
 @Composable
-internal fun TimelineScrubber(state: LazyListState, days: List<DisplayDay>, modifier: Modifier = Modifier) {
+internal fun TimelineScrubber(
+    state: LazyListState, days: List<DisplayDay>, modifier: Modifier = Modifier, trailingItems: Int = 0
+) {
     val last = days.lastOrNull() ?: return
     val count = last.offset + 1 + if (last.open) last.data.count else 0
     if (count < SCRUB_MIN_ROWS) return
-    val base by remember(state, count) { derivedStateOf { (state.layoutInfo.totalItemsCount - count).coerceAtLeast(0) } }
+    val base by remember(state, count, trailingItems) {
+        derivedStateOf { (state.layoutInfo.totalItemsCount - count - trailingItems).coerceAtLeast(0) }
+    }
     FastScroller(state, first = base, count = count, modifier = modifier) { index ->
         dayLabel((days.lastOrNull { it.offset <= index } ?: days.first()).data.time)
     }

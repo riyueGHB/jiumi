@@ -61,6 +61,7 @@ fun HidingTopBar(
     scrolled: Boolean,
     trailing: (@Composable () -> Unit)? = null,
     extra: (@Composable ColumnScope.() -> Unit)? = null,
+    pinned: Boolean = false,
     content: @Composable (top: Dp) -> Unit
 ) {
     val density = LocalDensity.current
@@ -88,7 +89,8 @@ fun HidingTopBar(
     val topDp = with(density) { height.toDp() }
     Box(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.statusBars).clipToBounds().nestedScroll(connection)
+            .windowInsetsPadding(WindowInsets.statusBars).clipToBounds()
+            .then(if (pinned) Modifier else Modifier.nestedScroll(connection))
     ) {
         content(topDp)
         Column(

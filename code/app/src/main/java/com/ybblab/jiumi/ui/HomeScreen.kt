@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import com.ybblab.jiumi.data.AppKind
 import com.ybblab.jiumi.data.Attention
@@ -95,9 +98,10 @@ import com.ybblab.jiumi.ui.theme.StatusSuccess
 import com.ybblab.jiumi.ui.theme.Ink
 
 @Composable
-fun HomeScreen(
+internal fun HomeScreen(
     controller: MonitorController,
     labels: AppLabels,
+    timelineSnapshot: TimelineSnapshot<LogEntry>,
     onOpenGroup: (String) -> Unit,
     onOpenAttention: (String) -> Unit,
     onOpenLog: (LogEntry) -> Unit,
@@ -113,6 +117,7 @@ fun HomeScreen(
     val ledger = state.ledger
     var view by rememberSaveable { mutableStateOf(HomeView.TIMELINE.name) }
     val list = rememberLazyListState()
+    val restoringScroll = remember { list.firstVisibleItemIndex > 0 }
     // Routine system work is listed like everything else; it is only never marked as needing a look.
     val routineKeys = remember(ledger) {
         ledger?.apps.orEmpty().filter { it.kind.id in ledger?.routineKinds.orEmpty() }.map { it.key }.toSet()
@@ -123,8 +128,10 @@ fun HomeScreen(
     var rankAll by rememberSaveable { mutableStateOf(false) }
     var routineOpen by rememberSaveable { mutableStateOf(false) }
     val selectedFilter = TimelineFilter.entries.firstOrNull { it.name == filter } ?: TimelineFilter.ALL
+    val filterQuery = state.shownRange to selectedFilter
     val timeline = if (view == HomeView.TIMELINE.name && ledger != null) {
-        rememberTimeline(controller, ledger.timelineSource, state.shownRange to selectedFilter, list) {
+        rememberTimeline(controller, ledger.timelineSource, filterQuery, list,
+            snapshot = timelineSnapshot, reuseKey = state.shownRange) {
             selectedFilter.matches(it.item)
         }
     } else null
@@ -136,16 +143,34 @@ fun HomeScreen(
     val live = state.running && (built != Range.SESSION || state.sessionOpen)
     var picked by remember(built, state.window.first, activity?.buckets?.stepMs) { mutableStateOf<Int?>(null) }
     val days = rememberTimelineDays(timeline?.days.orEmpty(), toggled.value)
+    val bottom = 32.dp + LocalTabBarInset.current
+    val density = LocalDensity.current
+    var filterSpacing by rememberSaveable(built) { mutableIntStateOf(0) }
+    var switchingFilter by rememberSaveable(built) { mutableStateOf(false) }
+    LaunchedEffect(timeline, filterQuery) {
+        if (!switchingFilter || timeline == null || timelineSnapshot.query != filterQuery) return@LaunchedEffect
+        // Wait for the new rows to lay out before trimming space a short result needs below it.
+        withFrameNanos {}
+        withFrameNanos {}
+        val layout = list.layoutInfo
+        val last = layout.visibleItemsInfo.firstOrNull { it.index == layout.totalItemsCount - 2 }
+        val gap = last?.let { layout.viewportEndOffset - it.offset - it.size - with(density) { bottom.roundToPx() } }
+        filterSpacing = (gap ?: 0).coerceIn(0, filterSpacing)
+        switchingFilter = false
+    }
 
     val scrolled by remember { androidx.compose.runtime.derivedStateOf { list.canScrollBackward } }
     HidingTopBar(stringResource(R.string.tab_monitor), scrolled) { top ->
+    if (view == HomeView.TIMELINE.name && timeline == null && timelineSnapshot.index == null && restoringScroll) {
+        return@HidingTopBar
+    }
     Box(Modifier.fillMaxSize()) {
     LazyColumn(
         state = list,
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = top + PageTopGap, bottom = 32.dp + LocalTabBarInset.current)
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = top + PageTopGap, bottom = bottom)
     ) {
         // The monitoring service: running, interrupted, or ready to start once Wireless debugging is paired.
         val session = state.session
@@ -204,11 +229,21 @@ fun HomeScreen(
 
         when (HomeView.valueOf(view)) {
             HomeView.TIMELINE -> {
-                item {
+                item(key = "timeline-filter") {
                     FilterChips(TimelineFilter.entries.map { stringResource(it.label) }, selectedFilter.ordinal,
-                        Modifier.padding(top = 4.dp)) { filter = TimelineFilter.entries[it].name }
+                        Modifier.padding(top = 4.dp)) {
+                        val next = TimelineFilter.entries[it].name
+                        if (filter != next) {
+                            // Measure at the existing offset even when the new filter removes most of the list.
+                            filterSpacing = list.layoutInfo.viewportSize.height
+                            switchingFilter = true
+                            filter = next
+                        }
+                    }
                 }
-                if (timeline?.days?.isEmpty() == true) item { Column(Modifier.padding(top = 12.dp)) { EmptyCard(stringResource(R.string.record_empty_running)) } }
+                if (timeline?.days?.isEmpty() == true) item {
+                    Column(Modifier.padding(top = 12.dp)) { EmptyCard(stringResource(R.string.record_empty_running)) }
+                }
                 timelineItems(days, timeline?.records, "log", toggled::toggle) { entry, first, last ->
                     LogRow(
                         entry.item, routine = entry.key in routineKeys,
@@ -216,6 +251,9 @@ fun HomeScreen(
                         app = entry.key to labels, first = first, last = last,
                         onClick = { onOpenLog(entry) }
                     )
+                }
+                if (filterSpacing > 0) item(key = "timeline-space") {
+                    Spacer(Modifier.height(with(density) { filterSpacing.toDp() }))
                 }
             }
             HomeView.APPS -> {
@@ -300,7 +338,8 @@ fun HomeScreen(
     }
     if (view == HomeView.TIMELINE.name) {
         TimelineScrubber(list, days, Modifier.align(Alignment.CenterEnd).windowInsetsPadding(WindowInsets.safeDrawing)
-            .padding(top = top + 8.dp, bottom = 16.dp + LocalTabBarInset.current))
+            .padding(top = top + 8.dp, bottom = 16.dp + LocalTabBarInset.current),
+            trailingItems = if (filterSpacing > 0) 1 else 0)
     }
     }
     }

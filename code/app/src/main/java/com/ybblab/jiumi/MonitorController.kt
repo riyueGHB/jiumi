@@ -24,6 +24,7 @@ import com.ybblab.jiumi.data.ManageAction
 import com.ybblab.jiumi.data.ManageRules
 import com.ybblab.jiumi.data.Management
 import com.ybblab.jiumi.data.MonitoringPreferences
+import com.ybblab.jiumi.data.NetworkManagement
 import com.ybblab.jiumi.data.PackageFacts
 import com.ybblab.jiumi.data.PackageFactsSource
 import com.ybblab.jiumi.data.Refusal
@@ -195,6 +196,7 @@ class MonitorController(
     private val owners = PackageOwners(context.packageManager, catalogPackages = { inventoryByUid[it].orEmpty() })
     private val sync = JiumiSync(store, rules)
     val monitoringExclusions = monitoring.exclusions
+    internal val networkManagement = NetworkManagement(context) { probe.service.value }
     private val usage = NetworkUsage(context)
     private val appKinds = AppKinds(context.packageManager)
 
@@ -595,6 +597,9 @@ class MonitorController(
     suspend fun appAccess(key: com.ybblab.jiumi.data.AppKey, action: String, permission: String = ""):
         org.json.JSONObject? = withContext(Dispatchers.IO) {
         val pkg = key.pkg ?: return@withContext null
+        if (action == "networkDeny" || action == "networkAllow") {
+            return@withContext networkManagement.change(key, blocked = action == "networkDeny", expert = local.value.expertMode)
+        }
         val service = probe.service.value
         if (service == null) {
             val offline = JSONObject().put("lock", "monitor")
@@ -775,6 +780,7 @@ class MonitorController(
                     // A start that gave up waiting is answered all the same; it did not fail.
                     local.update { l -> if (l.problem == Problem.START || l.problem.isNetworkProblem()) l.copy(problem = null) else l }
                     configure(service)
+                    scope.launch { networkManagement.onConnected(service) }
                     scope.launch(Dispatchers.IO) {
                         shellCatalog()
                         refresh()

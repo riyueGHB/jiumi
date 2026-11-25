@@ -249,6 +249,17 @@ internal class ProbeService(
         }
     }
 
+    override fun ownedNetworkRules(): String {
+        enforceOwner()
+        val user = Binder.getCallingUid() / PER_USER_RANGE
+        val token = Binder.clearCallingIdentity()
+        return try {
+            appAccess.ownedNetworkRules(user).toString()
+        } finally {
+            Binder.restoreCallingIdentity(token)
+        }
+    }
+
     override fun managePackage(action: String, packageName: String): String {
         enforceOwner()
         // The app decides what may be changed; the monitor only refuses what is never a target.

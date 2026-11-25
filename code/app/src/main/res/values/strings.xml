@@ -56,7 +56,7 @@
     <string name="settings_adb_options">Backup connection</string>
     <string name="settings_records">Logs</string>
     <string name="settings_records_summary">Monitoring history, export and buffer limit</string>
-    <string name="settings_management_summary">Disable and uninstall apps</string>
+    <string name="settings_management_summary">Network access, disabling and uninstalling apps</string>
     <string name="settings_about_summary">Version, updates and open-source licenses</string>
     <string name="section_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>
@@ -472,7 +472,7 @@
     <string name="state_suspended">Suspended</string>
     <string name="state_deleted">Uninstalled</string>
     <string name="section_advanced">Advanced</string>
-    <string name="settings_advanced_summary">Expert mode and task visibility</string>
+    <string name="settings_advanced_summary">Task visibility and expert mode</string>
     <string name="settings_hide_from_recents">Hide task card</string>
     <string name="settings_hide_from_recents_desc">When enabled, Jiumi is hidden from recent apps.</string>
     <string name="settings_manage_identity">Runs as</string>
@@ -818,7 +818,16 @@
     <string name="appop_write_settings">Change system settings</string>
     <string name="appop_all_files">Access all files</string>
     <string name="appop_usage_stats">Read app usage</string>
-    <string name="access_network_note">Android’s own firewall rule for this app, on Android 14 and later. Android clears it when the phone restarts.</string>
+    <string name="access_network_note">Uses Android’s firewall on Android 14 and later. Restarting the phone clears the rule. Settings → App management → App network list can restore it.</string>
+    <string name="network_management_title">App network list</string>
+    <string name="network_management_restore">Restore restrictions after restart</string>
+    <string name="network_management_restore_desc">With this switch on, Jiumi restores network restrictions for the listed apps after a phone restart once the monitor connects.</string>
+    <string name="network_management_empty">Turn off “Allow network access” on an app’s Network access page to add it here automatically.</string>
+    <string name="network_management_restore_pending">Waiting to restore after restart</string>
+    <string name="network_management_restore_failed">Couldn’t verify restoration</string>
+    <string name="network_management_not_restored">Restriction hasn’t been restored since restart</string>
+    <string name="network_management_status_unknown">Current restriction status is unknown</string>
+    <string name="network_management_save_error">Couldn’t save network management settings.</string>
     <string name="action_copy">Copy</string>
     <string name="copied_package">Package name copied</string>
     <string name="access_group_location">Location</string>
