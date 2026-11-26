@@ -163,7 +163,9 @@ class AirModePairingManager(
     }
 
     private fun loadOrCreateAdbKey(replaceInvalidKey: Boolean = false): AirAdbKey =
-        AirAdbKey.loadOrCreate(privateKeyFile(), publicKeyFile(), replaceInvalidKey)
+        AirAdbKey.loadOrCreate(privateKeyFile(), publicKeyFile(), replaceInvalidKey) { error ->
+            log.event("local ADB key rejected: ${error.diagnostic}")
+        }
 
     /**
      * Starts looking for the system's pairing dialog, or switches an ongoing search to [input]. An
@@ -685,17 +687,22 @@ class AirModePairingManager(
                     "ADB health check failed: ${error::class.java.simpleName}")
                 return@withLock false
             }
-            if (!healthOutput.contains(HEALTH_CHECK_MARKER)) {
+            if (healthOutput.exitCode != 0 || healthOutput.output.lineSequence().none { it.trim() == HEALTH_CHECK_MARKER }) {
                 if (!local) failConnection(generation, AirPairingFailure.ADB_HEALTH_RESPONSE_MISSING, "ADB health check missing marker")
                 return@withLock false
             }
-            val identityOutput = runCatching { connection.shell("id") }.getOrElse { error ->
+            val identityOutput = runCatching { connection.shell("id -u") }.getOrElse { error ->
                 if (!local) failConnection(generation, AirPairingFailure.ADB_IDENTITY_CHECK_FAILED,
                     "ADB identity check failed: ${error::class.java.simpleName}")
                 return@withLock false
             }
-            if (!identityOutput.contains("uid=")) {
-                if (!local) failConnection(generation, AirPairingFailure.ADB_IDENTITY_RESPONSE_MISSING, "ADB shell identity check missing uid")
+            val uid = identityOutput.uid
+            if (uid != AdbShellResult.ANDROID_SHELL_UID) {
+                val failure = if (uid == null) AirPairingFailure.ADB_IDENTITY_RESPONSE_MISSING else AirPairingFailure.ADB_WRONG_IDENTITY
+                val diagnostic = "ADB shell identity check rejected source=$source uid=$uid exit=${identityOutput.exitCode}"
+                if (local) forgetVerifiedPort()
+                if (!local || wifiTransportAvailable == false) failConnection(generation, failure, diagnostic)
+                else log.event(diagnostic)
                 return@withLock false
             }
             currentCoroutineContext().ensureActive()
@@ -715,7 +722,7 @@ class AirModePairingManager(
                 activeEndpoint = ActiveAirEndpoint(host, port, source)
                 markPairingTrusted(connectPort = port.takeUnless { local })
                 _failure.value = null
-                log.event("ADB shell connected source=$source identity=${identityOutput.trim().take(80)}")
+                log.event("ADB shell connected source=$source uid=$uid")
                 _state.value = PairingState.CONNECTED
                 true
             }
@@ -863,10 +870,11 @@ class AirModePairingManager(
     }
 
     private fun loopbackPort(connection: AirAdbClient): Int? = runCatching {
-        LoopbackAdbPort.verified(
-            connection.shell("getprop service.adb.listen_addrs"),
-            connection.shell("ss -ltn")
-        )
+        val addresses = connection.shell("getprop service.adb.listen_addrs")
+        val listeners = connection.shell("ss -ltn")
+        if (addresses.exitCode == 0 && listeners.exitCode == 0) {
+            LoopbackAdbPort.verified(addresses.output, listeners.output)
+        } else null
     }.getOrNull()
 
     /**
@@ -894,8 +902,12 @@ class AirModePairingManager(
         val connection = activeConnection ?: AirAdbClient(LOCAL_ADB_HOST, port, loadOrCreateAdbKey(), allowUserAuthorization = true)
         val closed = runCatching {
             if (connection !== activeConnection) connection.connect()
-            val legacyPort = connection.shell("getprop service.adb.tcp.port").trim().toIntOrNull()
-            if (legacyPort != port || connection.shell("getprop service.adb.listen_addrs").isNotBlank()) return@runCatching true
+            val legacyPort = connection.shell("getprop service.adb.tcp.port")
+            if (legacyPort.exitCode != 0) return@runCatching false
+            if (legacyPort.output.trim().toIntOrNull() != port) return@runCatching true
+            val addresses = connection.shell("getprop service.adb.listen_addrs")
+            if (addresses.exitCode != 0) return@runCatching false
+            if (addresses.output.isNotBlank()) return@runCatching true
             connection.restartUsb()
             repeat(20) {
                 if (runCatching { java.net.Socket().use { it.connect(InetSocketAddress(LOCAL_ADB_HOST, port), 250) } }.isFailure) return@runCatching true
@@ -914,19 +926,23 @@ class AirModePairingManager(
         closed
     }
 
-    /** Runs a command on the live shell; failures close the connection and return a marker. */
-    fun shell(command: String, timeoutMs: Long = 15_000L): String {
-        val conn = activeConnection ?: return "[ADB_DISCONNECTED]"
-        val future = shellTimeoutExecutor.submit<String> { conn.shell(command) }
+    /** Runs a command on the live shell. A transport failure closes the connection. */
+    fun shell(command: String, timeoutMs: Long = 15_000L): AdbShellResult? {
+        val conn = activeConnection ?: return null
+        val future = shellTimeoutExecutor.submit<AdbShellResult> { conn.shell(command) }
         return try {
             future.get(timeoutMs, TimeUnit.MILLISECONDS)
-        } catch (e: TimeoutException) {
+        } catch (_: TimeoutException) {
             future.cancel(true)
             markShellDown("shell timeout after ${timeoutMs}ms", conn)
-            "[ADB_TIMEOUT]"
-        } catch (e: Exception) {
-            markShellDown("shell error: ${e.cause?.message ?: e.message}", conn)
-            "[ADB_ERROR] ${e.cause?.message ?: e.message}"
+            null
+        } catch (error: Exception) {
+            if (error is InterruptedException) {
+                future.cancel(true)
+                Thread.currentThread().interrupt()
+            }
+            markShellDown("shell error: ${(error.cause ?: error).javaClass.simpleName}", conn)
+            null
         }
     }
 

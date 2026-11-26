@@ -17,9 +17,8 @@ import java.util.concurrent.Executor
  * within [WINDOW_MS] are folded into one record with a count, so a chatty caller costs one line
  * a minute. Nothing here changes how the system or the caller behaves.
  *
- * Where the shell may not watch other apps (Android 11 grants it no WATCH_APPOPS; the system then
- * reports only the shell's own accesses), the same records come from reading AppOps every
- * [POLL_MS] instead ([AccessPolls]).
+ * When a listener cannot observe other apps, its events come from reading AppOps every
+ * [POLL_MS] instead ([AccessPolls]). Android 11's shell lacks WATCH_APPOPS and needs both reads.
  */
 internal class AccessWatcher(context: Context, private val spool: EventSpool, private val states: UidStates) {
     private val thread = HandlerThread("access-watch").apply { start() }
@@ -53,18 +52,20 @@ internal class AccessWatcher(context: Context, private val spool: EventSpool, pr
         stop()
         val supported = ops.filter { op -> runCatching { opCode(op) >= 0 }.getOrDefault(false) }
         if (supported.isEmpty()) return@post
-        if (!watchesOthers) {
+        val noted = if (watchesOthers) runCatching { watchNoted(supported) }
+            .onFailure { ProbeMain.log("noted watch failed: ${it.cause?.javaClass?.simpleName ?: it.javaClass.simpleName}") }
+            .getOrNull() else null
+        val active = if (watchesOthers) runCatching { watchActive(supported) }
+            .onFailure { ProbeMain.log("active watch failed: ${it.cause?.javaClass?.simpleName ?: it.javaClass.simpleName}") }
+            .getOrNull() else null
+        listeners = listOfNotNull(noted, active)
+        if (noted == null || active == null) {
             polledOps = supported.toTypedArray()
-            polls = AccessPolls(System.currentTimeMillis())
+            polls = AccessPolls(System.currentTimeMillis(), includeNoted = noted == null, includeActive = active == null)
             handler.post(poll)
-            ProbeMain.log("polling ${supported.size} operations (no WATCH_APPOPS)")
-            return@post
         }
-        listeners = listOfNotNull(
-            runCatching { watchNoted(supported) }.onFailure { ProbeMain.log("noted watch failed: ${it.javaClass.simpleName}") }.getOrNull(),
-            runCatching { watchActive(supported) }.onFailure { ProbeMain.log("active watch failed: ${it.javaClass.simpleName}") }.getOrNull()
-        )
-        ProbeMain.log("watching ${supported.size} operations")
+        ProbeMain.log("AppOps ${supported.size} operations: noted=${if (noted == null) "poll" else "watch"}, " +
+            "active=${if (active == null) "poll" else "watch"}")
     }
 
     fun finishRecording() {

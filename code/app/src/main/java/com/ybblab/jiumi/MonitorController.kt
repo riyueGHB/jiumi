@@ -18,6 +18,9 @@ import com.ybblab.jiumi.access.AccessMethod
 import kotlinx.coroutines.CancellationException
 import androidx.core.graphics.drawable.toBitmap
 import com.ybblab.jiumi.access.RootShell
+import com.ybblab.jiumi.access.ShizukuFailure
+import com.ybblab.jiumi.access.ShizukuShell
+import com.ybblab.jiumi.access.unavailable
 import com.ybblab.jiumi.data.AppBackups
 import com.ybblab.jiumi.data.AppSource
 import com.ybblab.jiumi.data.ManageAction
@@ -105,7 +108,14 @@ class MonitorController(
     ) {
         val running: Boolean get() = session.end == null
     }
-    enum class Problem { CONNECT, START, STOP, STOP_PARTIAL, SHIZUKU, NETWORK_UNAVAILABLE, NETWORK_AUTHORIZATION, NETWORK_IDENTITY }
+    enum class Problem(val isShizuku: Boolean = false, val isShizukuReadiness: Boolean = false) {
+        CONNECT, START, START_COMMAND, START_NO_REPLY, STOP, STOP_PARTIAL,
+        SHIZUKU_CONNECTION(isShizuku = true, isShizukuReadiness = true),
+        SHIZUKU_AUTHORIZATION(isShizuku = true, isShizukuReadiness = true),
+        SHIZUKU_UNSUPPORTED(isShizuku = true, isShizukuReadiness = true),
+        SHIZUKU_SERVICE(isShizuku = true), SHIZUKU_SHELL(isShizuku = true),
+        NETWORK_UNAVAILABLE, NETWORK_AUTHORIZATION, NETWORK_IDENTITY, NETWORK_KEY
+    }
 
     data class UiState(
         val pairingState: PairingState = PairingState.IDLE,
@@ -735,7 +745,7 @@ class MonitorController(
                 (e.root == RootShell.State.UNCHECKED && access.root.wasReady)
             com.ybblab.jiumi.access.AccessMethod.SHIZUKU -> e.shizuku.ready
         }
-        val problem = l.problem?.takeUnless { ready && it == Problem.SHIZUKU }
+        val problem = l.problem?.takeUnless { e.shizuku.ready && it.isShizukuReadiness }
         UiState(pairingState, e.trust, failure, service != null, l.busy, l.awaiting > 0 && service == null, problem, l.footprint, l.range,
             l.ledger, l.callTracing, l.session, l.spoolLimitMb, l.window, l.spans, l.live, l.liveApps, l.activity, l.shownRange, l.allowRemovePreinstalled, l.expertMode,
             l.autoRefreeze, l.notices, e.method, ready, e.shizuku, e.root)
@@ -778,7 +788,11 @@ class MonitorController(
                     if (hadMonitor && local.value.busy != Busy.STOPPING) resumeInterrupted("monitor lost")
                 } else {
                     // A start that gave up waiting is answered all the same; it did not fail.
-                    local.update { l -> if (l.problem == Problem.START || l.problem.isNetworkProblem()) l.copy(problem = null) else l }
+                    local.update { l ->
+                        if (l.problem.isProbeStartProblem() || l.problem.isNetworkProblem() || l.problem?.isShizuku == true) {
+                            l.copy(problem = null)
+                        } else l
+                    }
                     configure(service)
                     scope.launch { networkManagement.onConnected(service) }
                     scope.launch(Dispatchers.IO) {
@@ -901,9 +915,9 @@ class MonitorController(
         local.update { l -> (l.busy == null).also { claimed = it }.let { if (it) l.copy(busy = Busy.STARTING, problem = null) else l } }
         if (!claimed) return launched()
         scope.launch(Dispatchers.IO) {
+            val method = access.method.value
             var problem: Problem? = null
             try {
-                val method = access.method.value
                 // Recheck after claiming Busy.STARTING so a finished session cannot be reopened.
                 if (resumeOpenSession && (!store.hasOpenSession() || !canStartUnattended(method) ||
                     (requireWirelessTransport && (method != AccessMethod.WIRELESS ||
@@ -918,11 +932,11 @@ class MonitorController(
                     com.ybblab.jiumi.access.AccessMethod.ROOT -> startOverRoot(launched)
                     com.ybblab.jiumi.access.AccessMethod.SHIZUKU -> startOverShizuku(launched)
                 }
-                if (problem == null) openSessionIfNone()
+                if (problem == null || probe.service.value != null) openSessionIfNone()
             } finally {
                 launched()
                 // A monitor that answered after the wait ran out still counts as started.
-                val settled = problem.takeUnless { probe.service.value != null }
+                val settled = problem.takeUnless { probe.service.value != null || access.method.value != method }
                 local.update { it.copy(busy = null, problem = settled) }
                 if (access.method.value == AccessMethod.NETWORK) {
                     showIndicator()
@@ -945,8 +959,13 @@ class MonitorController(
                 }
                 if (!pairing.isShellReady) return Problem.CONNECT
             }
-            if (pairing.shell(ownPermissionsCommand()).startsWith("[ADB_") ||
-                pairing.shell(probe.startCommand(probeConfiguration())).startsWith("[ADB_")) return Problem.CONNECT
+            val grants = pairing.shell(ownPermissionsCommand()) ?: return Problem.CONNECT
+            if (grants.exitCode != 0) android.util.Log.w(TAG, "Wireless ADB optional grants exited with ${grants.exitCode}")
+            val start = pairing.shell(probe.startCommand(probeConfiguration())) ?: return Problem.CONNECT
+            if (start.exitCode != 0) {
+                android.util.Log.w(TAG, "Wireless ADB probe launch exited with ${start.exitCode}")
+                return Problem.START_COMMAND
+            }
             launched()
             return waitForProbe()
         } finally {
@@ -957,10 +976,12 @@ class MonitorController(
 
     private suspend fun startOverNetwork(launched: () -> Unit): Problem? {
         val previousCheck = networkCheck.value
+        var launchExitCode = 0
         val result = try {
             networkAdb.use { shell ->
-                shell.shell(ownPermissionsCommand())
-                shell.shell(probe.startCommand(probeConfiguration()))
+                val grants = shell.shell(ownPermissionsCommand())
+                if (grants.exitCode != 0) android.util.Log.w(TAG, "Network ADB optional grants exited with ${grants.exitCode}")
+                launchExitCode = shell.shell(probe.startCommand(probeConfiguration())).exitCode
             }
         } catch (error: CancellationException) {
             throw error
@@ -974,11 +995,16 @@ class MonitorController(
         return when (result) {
             is NetworkAdb.Result.Ready -> {
                 networkAdb.rememberPort(result.port)
+                if (launchExitCode != 0) {
+                    android.util.Log.w(TAG, "Network ADB probe launch exited with $launchExitCode")
+                    return Problem.START_COMMAND
+                }
                 launched()
                 waitForProbe()
             }
             is NetworkAdb.Result.NeedsAuthorization -> Problem.NETWORK_AUTHORIZATION
             NetworkAdb.Result.WrongIdentity -> Problem.NETWORK_IDENTITY
+            NetworkAdb.Result.KeyUnavailable -> Problem.NETWORK_KEY
             NetworkAdb.Result.Unavailable -> Problem.NETWORK_UNAVAILABLE
         }
     }
@@ -991,17 +1017,42 @@ class MonitorController(
     }
 
     private suspend fun startOverShizuku(launched: () -> Unit): Problem? {
-        if (access.shizuku.shell("id -u", PROBE_SHELL_MS).trim() != "2000") return Problem.SHIZUKU
-        access.shizuku.shell(ownPermissionsCommand(), PROBE_SHELL_MS)
-        if (access.shizuku.shell(probe.startCommand(probeConfiguration()), START_TIMEOUT_MS).startsWith("[SHIZUKU_")) return Problem.SHIZUKU
-        launched()
-        val problem = waitForProbe()
-        access.shizuku.release()
-        return problem
+        val shizuku = access.shizuku
+        return manageLock.withLock {
+            try {
+                when (val identity = shizuku.shell("id -u", PROBE_SHELL_MS)) {
+                    is ShizukuShell.Result.Failed -> return@withLock identity.reason.startProblem(Problem.SHIZUKU_SHELL)
+                    is ShizukuShell.Result.Completed -> if (identity.exitCode != 0 || identity.output.trim() != "2000") {
+                        android.util.Log.w(SHIZUKU_TAG, "Shell identity check failed (exit=${identity.exitCode})")
+                        return@withLock Problem.SHIZUKU_SHELL
+                    }
+                }
+                // These optional grants can be refused even when the shell can start the monitor.
+                when (val grants = shizuku.shell(ownPermissionsCommand(), PROBE_SHELL_MS)) {
+                    is ShizukuShell.Result.Failed -> android.util.Log.w(SHIZUKU_TAG, "Optional grants failed: ${grants.reason}")
+                    is ShizukuShell.Result.Completed -> if (grants.exitCode != 0) {
+                        android.util.Log.w(SHIZUKU_TAG, "Optional grants exited with ${grants.exitCode}")
+                    }
+                }
+                when (val start = shizuku.shell(probe.startCommand(probeConfiguration()), START_TIMEOUT_MS)) {
+                    is ShizukuShell.Result.Failed -> return@withLock start.reason.startProblem(Problem.START_COMMAND)
+                    is ShizukuShell.Result.Completed -> if (start.exitCode != 0) {
+                        android.util.Log.w(SHIZUKU_TAG, "Probe launch exited with ${start.exitCode}")
+                        return@withLock Problem.START_COMMAND
+                    }
+                }
+                launched()
+                waitForProbe().also {
+                    if (it != null) android.util.Log.w(SHIZUKU_TAG, "Probe did not reply within ${START_TIMEOUT_MS}ms")
+                }
+            } finally {
+                shizuku.release()
+            }
+        }
     }
 
     private suspend fun waitForProbe(): Problem? =
-        if (withTimeoutOrNull(START_TIMEOUT_MS) { probe.service.first { it != null } } == null) Problem.START else null
+        if (withTimeoutOrNull(START_TIMEOUT_MS) { probe.service.first { it != null } } == null) Problem.START_NO_REPLY else null
 
     /** Whether the chosen way can start the monitor without asking the user anything. */
     private fun canStartUnattended(method: AccessMethod = access.method.value): Boolean = when (method) {
@@ -1032,8 +1083,10 @@ class MonitorController(
         scope.launch {
             try {
                 val ok = access.shizuku.requestAuthorization()
+                if (access.method.value != AccessMethod.SHIZUKU) return@launch
+                val problem = if (ok) null else access.shizuku.refresh().unavailable?.startProblem()
                 local.update {
-                    it.copy(problem = if (ok || access.method.value != com.ybblab.jiumi.access.AccessMethod.SHIZUKU) null else Problem.SHIZUKU)
+                    if (problem != null || it.problem?.isShizukuReadiness == true) it.copy(problem = problem) else it
                 }
             } finally {
                 checkGate.endShizuku()
@@ -1080,7 +1133,7 @@ class MonitorController(
                 val s = access.shizuku.refresh()
                 val shouldAsk = checkGate.onResumeShizuku(s)
                 if (s.ready) {
-                    local.update { if (it.problem == Problem.SHIZUKU) it.copy(problem = null) else it }
+                    local.update { if (it.problem?.isShizukuReadiness == true) it.copy(problem = null) else it }
                 } else if (shouldAsk) {
                     authorizeShizuku()
                 }
@@ -1122,14 +1175,18 @@ class MonitorController(
         }
     }
 
+    private fun Problem?.isProbeStartProblem(): Boolean =
+        this == Problem.START || this == Problem.START_COMMAND || this == Problem.START_NO_REPLY
+
+    private fun Problem?.isNetworkProblem(): Boolean =
+        this == Problem.NETWORK_UNAVAILABLE || this == Problem.NETWORK_AUTHORIZATION ||
+            this == Problem.NETWORK_IDENTITY || this == Problem.NETWORK_KEY
+
     /**
      * The persistent notification follows the monitor: shown while it runs within an open session and
      * the user wants it, removed otherwise. Refreshes correct the timer from newly imported monitor
      * events. When the monitor stops under the open session it was shown for, a notice says so instead.
      */
-    private fun Problem?.isNetworkProblem(): Boolean =
-        this == Problem.NETWORK_UNAVAILABLE || this == Problem.NETWORK_AUTHORIZATION || this == Problem.NETWORK_IDENTITY
-
     @Synchronized
     private fun showIndicator() {
         val open = store.sessions().firstOrNull { it.end == null }
@@ -1150,11 +1207,14 @@ class MonitorController(
             // At boot there may be no previous running notification. Only notify once the
             // unattended recovery has failed, and deduplicate later retries of this interruption.
             if (network && on && open != null && !running && status.busy == null && !networkInterruptionNotified &&
-                (status.problem.isNetworkProblem() || status.problem == Problem.START)) {
+                (status.problem.isNetworkProblem() || status.problem.isProbeStartProblem())) {
                 val message = when (status.problem) {
                     Problem.NETWORK_UNAVAILABLE -> R.string.network_adb_unavailable
                     Problem.NETWORK_AUTHORIZATION -> R.string.network_adb_authorization_needed
                     Problem.NETWORK_IDENTITY -> R.string.network_adb_wrong_identity
+                    Problem.NETWORK_KEY -> R.string.network_adb_key_unavailable
+                    Problem.START_COMMAND -> R.string.error_probe_start_command
+                    Problem.START_NO_REPLY -> R.string.error_probe_start_no_reply
                     else -> R.string.notification_interrupted_text
                 }
                 networkInterruptionNotified = MonitorNotice.postInterrupted(context, message)
@@ -1523,6 +1583,7 @@ class MonitorController(
 
     private companion object {
         const val TAG = "JiumiSync"
+        const val SHIZUKU_TAG = "JiumiShizuku"
         const val KEY_SPOOL_MB = "spool_limit_mb"
         const val KEY_ALLOW_REMOVE = "allow_remove_preinstalled"
         const val KEY_EXPERT = "expert_mode"
@@ -1558,3 +1619,12 @@ class MonitorController(
         const val GET_INSTALLED_APPS = "com.android.permission.GET_INSTALLED_APPS"
     }
 }
+
+internal fun ShizukuFailure.startProblem(commandProblem: MonitorController.Problem = MonitorController.Problem.START_COMMAND): MonitorController.Problem =
+    when (this) {
+        ShizukuFailure.CONNECTION -> MonitorController.Problem.SHIZUKU_CONNECTION
+        ShizukuFailure.AUTHORIZATION -> MonitorController.Problem.SHIZUKU_AUTHORIZATION
+        ShizukuFailure.UNSUPPORTED -> MonitorController.Problem.SHIZUKU_UNSUPPORTED
+        ShizukuFailure.SERVICE -> MonitorController.Problem.SHIZUKU_SERVICE
+        ShizukuFailure.COMMAND -> commandProblem
+    }

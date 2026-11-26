@@ -9,7 +9,7 @@
 
 **[下载 APK](https://github.com/ybblab/Jiumi/releases/latest)** · [使用指南](https://jiumi.ybblab.com/download/) · [官网](https://jiumi.ybblab.com)
 
-<sub>Android 11 及以上 · 安装包约 4 MB · <a href="LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 及以上 · 64 位 ARM · 安装包约 4 MB · <a href="LICENSE">Apache 2.0</a></sub>
 
 **简体中文** · [English](docs/readme/README.en.md) · [日本語](docs/readme/README.ja.md) · [한국어](docs/readme/README.ko.md) · [Español](docs/readme/README.es.md) · [Deutsch](docs/readme/README.de.md) · [Français](docs/readme/README.fr.md) · [हिन्दी](docs/readme/README.hi.md) · [Bahasa Indonesia](docs/readme/README.id.md) · [Português (Brasil)](docs/readme/README.pt-BR.md) · [Русский](docs/readme/README.ru.md)
 
@@ -108,7 +108,7 @@ Android 在应用运行时会产生权限访问记录、连接表、系统跟踪
 
 ## 下载与开始监测
 
-1. 在 Android 11 或更高版本的手机上，从 [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest) 下载并安装 APK。
+1. 在运行 Android 11 或更高版本的 64 位 ARM 手机上，从 [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest) 下载并安装 APK。
 2. 首次打开时选择启动方式。推荐使用无线调试：连接 Wi-Fi，按引导允许通知、开启开发者选项，并在揪咪的通知里输入系统显示的 6 位配对码。通知栏输不了时，在第 3 步点「通知栏输不了配对码？」，改用分屏、小窗或快捷设置磁贴输入。手机已开启 ADB 端口时，也可以选择网络调试。
 3. 到「监测」页点「开始监测」。监测期间通知栏会显示常驻通知，可以从通知或 App 停止监测。
 

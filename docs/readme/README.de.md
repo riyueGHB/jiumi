@@ -9,7 +9,7 @@ Sieh, was Apps im Vorder- und Hintergrund tun, und entscheide, ob du sie behält
 
 **[APK herunterladen](https://github.com/ybblab/Jiumi/releases/latest)** · [Anleitung](https://jiumi.ybblab.com/en/download/) · [Website](https://jiumi.ybblab.com/en/)
 
-<sub>Android 11 oder neuer · APK ca. 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 oder neuer · ARM64 · APK ca. 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · **Deutsch** · [Français](README.fr.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md) · [Português (Brasil)](README.pt-BR.md) · [Русский](README.ru.md)
 
@@ -108,7 +108,7 @@ Die **optionale Domainerfassung** empfängt DNS-Anfragen über ein lokales VPN u
 
 ## Herunterladen und Überwachung starten
 
-1. Lade auf einem Smartphone mit Android 11 oder neuer die APK von [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest) herunter und installiere sie.
+1. Lade auf einem ARM64-Smartphone mit Android 11 oder neuer die APK von [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest) herunter und installiere sie.
 2. Wähle beim ersten Öffnen von Jiumi eine Startmethode. Für die empfohlene Methode, drahtloses Debugging, verbinde dich mit dem WLAN und folge der Einrichtung, um Benachrichtigungen zu erlauben und die Entwickleroptionen zu aktivieren. Gib in der Benachrichtigung von Jiumi den sechsstelligen Kopplungscode ein, den Android anzeigt. Lässt sich die Benachrichtigung nicht nutzen, tippe in Schritt 3 auf “Can’t type in the notification?” und gib den Code stattdessen im geteilten Bildschirm, in einem kleinen Fenster oder über die Schnelleinstellungs-Kachel ein. Ist bereits ein ADB-Port offen, kannst du auch Netzwerk-Debugging wählen.
 3. Tippe auf der Seite **Monitor** auf **Start monitoring**. Während der Überwachung erscheint eine dauerhafte Benachrichtigung. Du kannst die Überwachung über die Benachrichtigung oder in der App beenden.
 

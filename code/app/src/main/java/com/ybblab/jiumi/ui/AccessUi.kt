@@ -58,7 +58,7 @@ fun rootAction(state: RootShell.State): Int = when (state) {
 fun shizukuStatus(state: ShizukuState): String = stringResource(when {
     state.ready -> R.string.shizuku_ready
     !state.installed && !state.running -> R.string.shizuku_not_installed
-    !state.running -> R.string.shizuku_not_running
+    !state.running -> R.string.shizuku_not_connected
     !state.supportedVersion -> R.string.shizuku_old
     !state.usableIdentity -> R.string.shizuku_identity
     state.permissionBlocked -> R.string.shizuku_blocked

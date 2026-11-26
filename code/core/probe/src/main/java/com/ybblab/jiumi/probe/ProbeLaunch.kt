@@ -36,12 +36,13 @@ object ProbeLaunch {
             // The probe restores this before starting any watchers, including on a supervisor restart.
             append("config_tmp=\$(mktemp $dir/.launch-config.XXXXXX) || exit 1; ")
             append("printf '%s' ${quote(config)} > \"\$config_tmp\" && mv -f \"\$config_tmp\" $dir/config.json || exit 1; ")
-            append("[ \"\$(wc -c <$log 2>/dev/null || echo 0)\" -gt $LOG_ROTATE_BYTES ] && mv -f $log $log.1; ")
+            append("[ -f $log ] && [ \"\$(wc -c <$log 2>/dev/null || echo 0)\" -gt $LOG_ROTATE_BYTES ] && mv -f $log $log.1; ")
             // setsid detaches from the one-shot ADB shell so closing ADB does not hang it up.
             append("(setsid sh -c ${quote(supervisor)} </dev/null >>$log 2>&1 &); ")
             // Return only once the monitor exists. If the shell returned at once, the ADB session
             // would close and could take the background job down before it detached (Android 16).
-            append("i=0; while [ \$i -lt 30 ] && ! pidof ${ProbeProtocol.PROCESS_NAME} >/dev/null; do sleep 0.1; i=\$((i+1)); done")
+            append("i=0; until pidof ${ProbeProtocol.PROCESS_NAME} >/dev/null; do ")
+            append("[ \$i -lt 50 ] || exit 2; sleep 0.1; i=\$((i+1)); done; exit 0")
         }
     }
 

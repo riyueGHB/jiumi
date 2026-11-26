@@ -9,7 +9,7 @@ Voyez ce que font les applications au premier plan et en arrière-plan, puis cho
 
 **[Télécharger l’APK](https://github.com/ybblab/Jiumi/releases/latest)** · [Guide](https://jiumi.ybblab.com/en/download/) · [Site web](https://jiumi.ybblab.com/en/)
 
-<sub>Android 11 ou version ultérieure · APK d’environ 4 Mo · <a href="../../LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 ou version ultérieure · ARM64 · APK d’environ 4 Mo · <a href="../../LICENSE">Apache 2.0</a></sub>
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Deutsch](README.de.md) · **Français** · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md) · [Português (Brasil)](README.pt-BR.md) · [Русский](README.ru.md)
 
@@ -108,7 +108,7 @@ La **journalisation facultative des domaines** utilise un VPN local pour recevoi
 
 ## Télécharger et démarrer la surveillance
 
-1. Sur un téléphone équipé d’Android 11 ou d’une version ultérieure, téléchargez et installez l’APK depuis [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
+1. Sur un téléphone ARM64 équipé d’Android 11 ou d’une version ultérieure, téléchargez et installez l’APK depuis [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
 2. Au premier lancement de Jiumi, choisissez un mode de démarrage. Pour le débogage sans fil, qui est le mode recommandé, connectez-vous au Wi-Fi et suivez la procédure pour autoriser les notifications et activer les options pour les développeurs. Saisissez dans la notification de Jiumi le code d’association à six chiffres affiché par le système. Si la notification n’est pas utilisable, touchez “Can’t type in the notification?” à l’étape 3 et saisissez le code en écran partagé, dans une petite fenêtre ou via la vignette des Réglages rapides. Si un port ADB est déjà ouvert, vous pouvez aussi choisir le débogage réseau.
 3. Dans l’écran **Monitor**, appuyez sur **Start monitoring**. Une notification permanente s’affiche tant que la surveillance est active. Vous pouvez arrêter la surveillance depuis la notification ou l’application.
 

@@ -9,7 +9,7 @@
 
 **[APK डाउनलोड करें](https://github.com/ybblab/Jiumi/releases/latest)** · [उपयोग मार्गदर्शिका](https://jiumi.ybblab.com/en/download/) · [आधिकारिक वेबसाइट](https://jiumi.ybblab.com/en/)
 
-<sub>Android 11 या बाद का संस्करण · APK लगभग 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 या बाद का संस्करण · ARM64 · APK लगभग 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · **हिन्दी** · [Bahasa Indonesia](README.id.md) · [Português (Brasil)](README.pt-BR.md) · [Русский](README.ru.md)
 
@@ -108,7 +108,7 @@
 
 ## डाउनलोड करें और निगरानी शुरू करें
 
-1. Android 11 या बाद के संस्करण वाले फ़ोन पर [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest) से APK डाउनलोड करके इंस्टॉल करें।
+1. Android 11 या बाद के संस्करण वाले ARM64 फ़ोन पर [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest) से APK डाउनलोड करके इंस्टॉल करें।
 2. Jiumi को पहली बार खोलने पर शुरू करने का तरीका चुनें। सुझाए गए तरीके, वायरलेस डीबगिंग, के लिए Wi-Fi से जुड़ें और सेटअप के निर्देशों के अनुसार सूचनाओं की अनुमति दें और डेवलपर विकल्प चालू करें। सिस्टम में दिखने वाला छह अंकों का पेयरिंग कोड Jiumi की सूचना में डालें। अगर सूचना में कोड नहीं डाल पा रहे, तो चरण 3 में “Can’t type in the notification?” पर टैप करें और कोड स्प्लिट स्क्रीन, छोटी विंडो या क्विक सेटिंग्स टाइल से डालें। ADB पोर्ट पहले से खुला हो तो नेटवर्क डीबगिंग भी चुन सकते हैं।
 3. **Monitor** स्क्रीन पर **Start monitoring** दबाएँ। निगरानी चालू रहने तक एक सूचना बनी रहती है। निगरानी सूचना या ऐप से रोकी जा सकती है।
 

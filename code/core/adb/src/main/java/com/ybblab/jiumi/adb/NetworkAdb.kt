@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
+import java.io.IOException
 
 /** Connects to an already-open classic ADB listener on this phone. Never changes adbd. */
 class NetworkAdb(
@@ -28,6 +29,7 @@ class NetworkAdb(
         data class NeedsAuthorization(val port: Int) : Result
         data object Unavailable : Result
         data object WrongIdentity : Result
+        data object KeyUnavailable : Result
     }
 
     private val prefs = context.getSharedPreferences("jiumi_network_adb", Context.MODE_PRIVATE)
@@ -53,7 +55,16 @@ class NetworkAdb(
         require(port == null || port in 1..65535)
         require(!allowAuthorization || port != null)
         mutex.withLock {
-            val key = AirAdbKey.loadOrCreate(File(context.filesDir, "adb_key"), File(context.filesDir, "adb_key.pub"))
+            val key = try {
+                AirAdbKey.loadOrCreate(File(context.filesDir, "adb_key"), File(context.filesDir, "adb_key.pub"),
+                    replaceInvalidKey = true) { error ->
+                    log.event("network ADB rebuilding invalid local key: ${error.diagnostic}")
+                }
+            } catch (error: IOException) {
+                val diagnostic = (error as? InvalidAdbPrivateKeyException)?.diagnostic ?: error.javaClass.simpleName
+                log.event("network ADB key unavailable: $diagnostic")
+                return@withLock Result.KeyUnavailable
+            }
             val tried = mutableSetOf<Int>()
             var failure: Result = Result.Unavailable
             fun tryPort(candidate: Int): Result? {
@@ -62,7 +73,7 @@ class NetworkAdb(
                 client.use {
                     try {
                         it.connect()
-                        if (it.shell("id -u").trim() != "2000") return Result.WrongIdentity
+                        if (it.shell("id -u").uid != AdbShellResult.ANDROID_SHELL_UID) return Result.WrongIdentity
                     } catch (error: AirAdbAuthorizationException) {
                         return Result.NeedsAuthorization(candidate)
                     } catch (error: CancellationException) {

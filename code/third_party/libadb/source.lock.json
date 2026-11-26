@@ -3,9 +3,7 @@
   "ndk_revision": "29.0.14206865",
   "cmake_revision": "3.22.1",
   "abis": [
-    "arm64-v8a",
-    "armeabi-v7a",
-    "x86_64"
+    "arm64-v8a"
   ],
   "source_date_epoch": 1748165667,
   "sources": {

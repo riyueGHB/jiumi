@@ -9,7 +9,7 @@ Veja o que os apps fazem em primeiro e segundo plano e decida se quer mantê-los
 
 **[Baixar o APK](https://github.com/ybblab/Jiumi/releases/latest)** · [Guia](https://jiumi.ybblab.com/en/download/) · [Site oficial](https://jiumi.ybblab.com/en/)
 
-<sub>Android 11 ou posterior · APK de cerca de 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 ou posterior · ARM64 · APK de cerca de 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md) · **Português (Brasil)** · [Русский](README.ru.md)
 
@@ -108,7 +108,7 @@ O **registro opcional de domínios** usa uma VPN local para receber consultas DN
 
 ## Baixar e iniciar o monitoramento
 
-1. Em um celular com Android 11 ou posterior, baixe e instale o APK em [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
+1. Em um celular ARM64 com Android 11 ou posterior, baixe e instale o APK em [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
 2. Na primeira vez que abrir o Jiumi, escolha um modo de inicialização. Para usar a depuração sem fio, que é o modo recomendado, conecte-se ao Wi-Fi e siga a configuração para permitir notificações e ativar as opções do desenvolvedor. Digite na notificação do Jiumi o código de pareamento de seis dígitos que o Android exibe. Se não puder usar a notificação, toque em “Can’t type in the notification?” na etapa 3 e digite o código em tela dividida, em uma janela pequena ou pelo bloco das Configurações rápidas. Se já houver uma porta ADB aberta, você também pode escolher a depuração por rede.
 3. Na tela **Monitor**, toque em **Start monitoring**. Uma notificação persistente aparece durante o monitoramento. Você pode interrompê-lo pela notificação ou pelo app.
 

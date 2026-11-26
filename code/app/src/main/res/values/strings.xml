@@ -745,7 +745,7 @@
     <string name="root_shell_failed">Couldn’t switch to shell</string>
     <string name="root_retry">Retry</string>
     <string name="shizuku_not_installed">Not installed</string>
-    <string name="shizuku_not_running">Not running</string>
+    <string name="shizuku_not_connected">Not connected</string>
     <string name="shizuku_identity">Unsupported identity</string>
     <string name="shizuku_old">Too old</string>
     <string name="shizuku_blocked">Denied</string>
@@ -754,7 +754,13 @@
     <string name="service_shizuku_needed">Shizuku not ready</string>
     <string name="error_root">Jiumi couldn’t get root access. Allow Jiumi in your root manager’s superuser list, then return here.</string>
     <string name="error_root_shell">Jiumi received root access but couldn’t switch to the Android shell user. Retry, or choose Wireless debugging.</string>
-    <string name="error_shizuku">Shizuku isn\'t running or hasn\'t allowed Jiumi. Open Shizuku, start it, and allow Jiumi.</string>
+    <string name="error_shizuku_connection">Jiumi couldn\'t connect to Shizuku. Check that Shizuku is running, then return to Jiumi.</string>
+    <string name="error_shizuku_authorization">Jiumi needs Shizuku authorization. Allow Jiumi in Shizuku, then try again.</string>
+    <string name="error_shizuku_unsupported">Jiumi needs Shizuku 12 or later, running via debugging or root.</string>
+    <string name="error_shizuku_service">Jiumi couldn\'t connect to its Shizuku helper service. Restart Shizuku and try again.</string>
+    <string name="error_shizuku_shell">Shizuku couldn\'t run the shell identity check for monitoring. Check how Shizuku was started and try again.</string>
+    <string name="error_probe_start_command">The monitor launch command failed. Try starting monitoring again.</string>
+    <string name="error_probe_start_no_reply">The monitor process appeared but didn\'t respond in time. Try starting monitoring again.</string>
     <string name="setup_step_root_title">Grant root</string>
     <string name="setup_step_root_desc">Allow Jiumi in your root manager. If you’ve already granted access, Jiumi checks it automatically.</string>
     <string name="setup_step_shizuku_run_title">Start Shizuku</string>
@@ -862,6 +868,7 @@
     <string name="network_adb_verified">Connection verified. The monitor can start as the Android shell.</string>
     <string name="network_adb_authorization_needed">Android needs to authorize this connection. Continue and tap Allow in the system prompt.</string>
     <string name="network_adb_unavailable">No usable local ADB port was found. Check that a port is open, then search again or use Wireless debugging.</string>
+    <string name="network_adb_key_unavailable">Jiumi could not load or rebuild its local ADB key. Close Jiumi and try connecting again.</string>
     <string name="network_adb_wrong_identity">This port does not provide the Android shell identity required to start monitoring.</string>
     <string name="network_adb_checking">Checking for a local ADB connection…</string>
     <string name="network_adb_searching">Checking…</string>

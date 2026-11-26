@@ -9,7 +9,7 @@
 
 **[Скачать APK](https://github.com/ybblab/Jiumi/releases/latest)** · [Руководство](https://jiumi.ybblab.com/en/download/) · [Официальный сайт](https://jiumi.ybblab.com/en/)
 
-<sub>Android 11 и новее · APK около 4 МБ · <a href="../../LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 и новее · ARM64 · APK около 4 МБ · <a href="../../LICENSE">Apache 2.0</a></sub>
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md) · [Português (Brasil)](README.pt-BR.md) · **Русский**
 
@@ -108,7 +108,7 @@
 
 ## Скачать и запустить мониторинг
 
-1. На телефоне с Android 11 или новее скачайте и установите APK со страницы [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
+1. На телефоне ARM64 с Android 11 или новее скачайте и установите APK со страницы [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
 2. При первом запуске Jiumi выберите способ запуска. Для рекомендуемой беспроводной отладки подключитесь к Wi-Fi и следуйте подсказкам, чтобы разрешить уведомления и включить параметры разработчика. Введите в уведомлении Jiumi шестизначный код сопряжения, показанный системой. Если уведомление недоступно, нажмите “Can’t type in the notification?” на шаге 3 и введите код в режиме разделённого экрана, в маленьком окне или через плитку быстрых настроек. Если порт ADB уже открыт, можно выбрать и сетевую отладку.
 3. На странице **Monitor** нажмите **Start monitoring**. Во время мониторинга отображается постоянное уведомление. Остановить мониторинг можно из уведомления или приложения.
 

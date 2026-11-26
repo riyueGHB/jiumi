@@ -5,6 +5,10 @@ package com.ybblab.jiumi.access
 
 import android.os.Process
 import androidx.annotation.Keep
+import com.ybblab.jiumi.access.IShizukuShellService.ERROR_EXECUTE
+import com.ybblab.jiumi.access.IShizukuShellService.ERROR_IDENTITY
+import com.ybblab.jiumi.access.IShizukuShellService.ERROR_TIMEOUT
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
@@ -17,25 +21,52 @@ import kotlin.system.exitProcess
 class ShizukuShellService : IShizukuShellService.Stub() {
     override fun getUid(): Int = Process.myUid()
 
-    override fun execute(command: String, timeoutMs: Long): String {
-        if (Process.myUid() != SHELL_UID && Process.myUid() != ROOT_UID) return "[SHIZUKU_IDENTITY] uid=${Process.myUid()}"
+    override fun execute(command: String, timeoutMs: Long): ShizukuCommandResult {
+        if (Process.myUid() != SHELL_UID && Process.myUid() != ROOT_UID) {
+            return failure(ERROR_IDENTITY)
+        }
+        val process = try {
+            ProcessBuilder("sh", "-c", command).redirectErrorStream(true).start()
+        } catch (_: IOException) {
+            return failure(ERROR_EXECUTE)
+        } catch (_: SecurityException) {
+            return failure(ERROR_EXECUTE)
+        }
+        val text = StringBuffer()
+        val pump = Thread({
+            runCatching {
+                process.inputStream.bufferedReader().use { reader ->
+                    val buffer = CharArray(4096)
+                    while (true) {
+                        val count = reader.read(buffer)
+                        if (count < 0) break
+                        text.append(buffer, 0, count.coerceAtMost(MAX_OUTPUT_CHARS - text.length))
+                    }
+                }
+            }
+        }, "shizuku-output").apply { isDaemon = true }
         return try {
-            val process = ProcessBuilder("sh", "-c", command).redirectErrorStream(true).start()
-            val reader = process.inputStream.bufferedReader()
-            val text = StringBuilder()
-            val pump = Thread { runCatching { reader.forEachLine { if (text.length < MAX_OUTPUT_CHARS) text.appendLine(it) } } }
+            process.outputStream.close()
             pump.start()
             if (!process.waitFor(timeoutMs.coerceIn(1, MAX_TIMEOUT_MS), TimeUnit.MILLISECONDS)) {
-                process.destroyForcibly()
-                "[SHIZUKU_TIMEOUT]"
-            } else {
-                pump.join(2_000)
-                text.toString().trimEnd()
+                return failure(ERROR_TIMEOUT)
             }
-        } catch (error: Exception) {
-            "[SHIZUKU_ERROR] ${error.javaClass.simpleName}"
+            pump.join(2_000)
+            ShizukuCommandResult().apply {
+                exitCode = process.exitValue()
+                output = text.toString().trimEnd()
+            }
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            failure(ERROR_EXECUTE)
+        } catch (_: IOException) {
+            failure(ERROR_EXECUTE)
+        } finally {
+            if (process.isAlive) process.destroyForcibly()
         }
     }
+
+    private fun failure(code: Int) = ShizukuCommandResult().apply { status = code }
 
     override fun destroy() = exitProcess(0)
 

@@ -10,6 +10,7 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.IBinder
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,11 +37,26 @@ data class ShizukuState(
     /** The user chose "deny and don't ask again"; only Shizuku's own app can undo it. */
     val permissionBlocked: Boolean = false
 ) {
-    val ready: Boolean get() = running && supportedVersion && usableIdentity && authorized
+    val ready: Boolean get() = unavailable == null
     val canRequestPermission: Boolean get() = running && supportedVersion && usableIdentity && !authorized && !permissionBlocked
 }
 
+internal enum class ShizukuFailure { CONNECTION, AUTHORIZATION, UNSUPPORTED, SERVICE, COMMAND }
+
+internal val ShizukuState.unavailable: ShizukuFailure?
+    get() = when {
+        !running -> ShizukuFailure.CONNECTION
+        !supportedVersion || !usableIdentity -> ShizukuFailure.UNSUPPORTED
+        !authorized -> ShizukuFailure.AUTHORIZATION
+        else -> null
+    }
+
 class ShizukuShell(private val context: Context) {
+    internal sealed interface Result {
+        data class Completed(val exitCode: Int, val output: String) : Result
+        data class Failed(val reason: ShizukuFailure) : Result
+    }
+
     private val launcher = java.io.File(context.applicationInfo.nativeLibraryDir, "libjiumi_shell.so")
     private val _state = MutableStateFlow(ShizukuState())
     val state: StateFlow<ShizukuState> = _state.asStateFlow()
@@ -108,32 +124,45 @@ class ShizukuShell(private val context: Context) {
         }
     }
 
-    /**
-     * Runs [command] as the shell through Shizuku; output, or a line starting "[SHIZUKU_" when it could
-     * not. Shizuku running as root first switches to the shell, as the Root way does.
-     */
-    fun shell(command: String, timeoutMs: Long): String {
+    /** Runs [command] as shell, switching from root first if Shizuku runs as root. */
+    internal fun shell(command: String, timeoutMs: Long): Result {
         val state = refresh()
-        if (!state.ready) return "[SHIZUKU_UNAVAILABLE]"
+        state.unavailable?.let { return Result.Failed(it) }
         val asShell = if (state.root) "exec ${quote(launcher.absolutePath)} ${quote(command)}" else command
         return execute(asShell, timeoutMs)
     }
 
-    /** Runs [command] as root when Shizuku runs as root; null otherwise or when it could not run. */
+    /** Runs [command] as root. Completed commands keep their output for package-state verification. */
     fun asRoot(command: String, timeoutMs: Long): String? {
         val state = refresh()
         if (!state.ready || !state.root) return null
-        return execute(command, timeoutMs).takeUnless { it.startsWith("[SHIZUKU_") }
+        return (execute(command, timeoutMs) as? Result.Completed)?.output
     }
 
-    private fun execute(command: String, timeoutMs: Long): String {
+    private fun execute(command: String, timeoutMs: Long): Result {
         return try {
-            val remote = bind() ?: return "[SHIZUKU_SERVICE_UNAVAILABLE]"
-            remote.execute(command, timeoutMs)
+            val remote = bind() ?: return Result.Failed(refresh().unavailable ?: ShizukuFailure.SERVICE)
+            val result = remote.execute(command, timeoutMs)
+            when (result.status) {
+                0 -> Result.Completed(result.exitCode, result.output)
+                IShizukuShellService.ERROR_IDENTITY -> {
+                    Log.w(TAG, "Shizuku helper refused to run with its current identity")
+                    Result.Failed(ShizukuFailure.SERVICE)
+                }
+                IShizukuShellService.ERROR_TIMEOUT -> {
+                    Log.w(TAG, "Shizuku helper command timed out after ${timeoutMs}ms")
+                    Result.Failed(ShizukuFailure.COMMAND)
+                }
+                else -> {
+                    Log.w(TAG, "Shizuku helper could not run the command (status=${result.status})")
+                    Result.Failed(ShizukuFailure.COMMAND)
+                }
+            }
         } catch (error: Exception) {
             release()
             if (error is InterruptedException) Thread.currentThread().interrupt()
-            "[SHIZUKU_ERROR] ${error.javaClass.simpleName}"
+            Log.w(TAG, "Shizuku helper connection failed: ${error.javaClass.simpleName}")
+            Result.Failed(refresh().unavailable ?: ShizukuFailure.SERVICE)
         }
     }
 
@@ -153,8 +182,18 @@ class ShizukuShell(private val context: Context) {
         }
         connection = callback
         Shizuku.bindUserService(serviceArgs, callback)
-        if (!latch.await(BIND_TIMEOUT_S, TimeUnit.SECONDS)) { release(); return@synchronized null }
-        service?.takeIf { it.asBinder().isBinderAlive && (it.uid == SHELL_UID || it.uid == ROOT_UID) }.also { if (it == null) release() }
+        if (!latch.await(BIND_TIMEOUT_S, TimeUnit.SECONDS)) {
+            Log.w(TAG, "Shizuku helper did not connect within ${BIND_TIMEOUT_S}s")
+            release()
+            return@synchronized null
+        }
+        service?.takeIf { it.asBinder().isBinderAlive }?.let { helper ->
+            val uid = helper.uid
+            if (uid == SHELL_UID || uid == ROOT_UID) return@synchronized helper
+            Log.w(TAG, "Shizuku helper has an unsupported identity")
+        }
+        release()
+        null
     }
 
     /** Ends the helper process; the monitor it started runs on by itself. */
@@ -184,6 +223,7 @@ class ShizukuShell(private val context: Context) {
     }.getOrDefault(false)
 
     companion object {
+        private const val TAG = "JiumiShizuku"
         const val PACKAGE_NAME = "moe.shizuku.privileged.api"
         const val DOWNLOAD_URL = "https://shizuku.rikka.app/download/"
         private const val SHELL_UID = 2000

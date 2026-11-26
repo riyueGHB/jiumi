@@ -190,7 +190,8 @@ internal fun SettingsSectionScreen(
                             is NetworkAdb.Result.Ready -> stringResource(R.string.network_adb_saved_port, result.port)
                             is NetworkAdb.Result.NeedsAuthorization -> stringResource(R.string.network_adb_needs_authorization)
                             NetworkAdb.Result.Unavailable -> stringResource(R.string.network_adb_not_found)
-                            NetworkAdb.Result.WrongIdentity -> stringResource(R.string.network_adb_unusable)
+                            NetworkAdb.Result.WrongIdentity, NetworkAdb.Result.KeyUnavailable ->
+                                stringResource(R.string.network_adb_unusable)
                             null -> stringResource(R.string.network_adb_searching)
                         }
                         Card {
@@ -232,7 +233,7 @@ internal fun SettingsSectionScreen(
                                 Chevron()
                             }
                         }
-                        if (state.problem == MonitorController.Problem.SHIZUKU) GroupFooter(stringResource(R.string.error_shizuku), warning = true)
+                        statusMessage(state)?.let { GroupFooter(it, warning = true) }
                         GroupFooter(accessDescription(state.method))
                     }
                     if (selectedMethod == com.ybblab.jiumi.access.AccessMethod.WIRELESS) item {

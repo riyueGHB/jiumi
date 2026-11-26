@@ -31,6 +31,7 @@
     <string name="settings_air_adb_health_response_missing">无线 ADB 通道没有返回有效响应，请稍后重试。</string>
     <string name="settings_air_adb_identity_check_failed">无法验证无线调试通道身份，请稍后重试。</string>
     <string name="settings_air_adb_identity_response_missing">无线调试通道身份响应无效，请稍后重试。</string>
+    <string name="settings_air_adb_wrong_identity">无线调试通道的身份不受支持。请使用 Android shell（UID 2000），或选择 Root 方式。</string>
     <string name="settings_air_adb_connection_failed">无线 ADB 连接失败，请确认无线调试仍已开启。</string>
     <string name="settings_air_adb_endpoint_not_found">未找到可连接的无线 ADB 端口，请确认无线调试已开启。</string>
     <string name="settings_air_debug_port_invalid">请输入 1 到 65535 之间的端口。</string>

@@ -736,7 +736,7 @@
     <string name="root_shell_failed">切换 shell 身份失败</string>
     <string name="root_retry">重试</string>
     <string name="shizuku_not_installed">未安装</string>
-    <string name="shizuku_not_running">未运行</string>
+    <string name="shizuku_not_connected">未连接</string>
     <string name="shizuku_identity">身份不受支持</string>
     <string name="shizuku_old">版本过旧</string>
     <string name="shizuku_blocked">已拒绝</string>
@@ -745,7 +745,13 @@
     <string name="service_shizuku_needed">Shizuku 未就绪</string>
     <string name="error_root">揪咪无法取得 Root。请在 Root 管理器的超级用户列表中允许揪咪，再返回这里。</string>
     <string name="error_root_shell">揪咪已取得 Root，但未能切换到 Android 的 shell 身份。请重试，或改用无线调试。</string>
-    <string name="error_shizuku">Shizuku 没有运行，或还没允许揪咪使用。请打开 Shizuku，启动它并允许揪咪。</string>
+    <string name="error_shizuku_connection">揪咪未能连接到 Shizuku。请确认 Shizuku 正在运行，再返回揪咪。</string>
+    <string name="error_shizuku_authorization">揪咪尚未获得 Shizuku 授权。请在 Shizuku 中允许揪咪，再重试。</string>
+    <string name="error_shizuku_unsupported">请使用 Shizuku 12 或更新版本，并通过调试或 Root 启动它。</string>
+    <string name="error_shizuku_service">揪咪未能连接到自己的 Shizuku 辅助服务。请重启 Shizuku 后重试。</string>
+    <string name="error_shizuku_shell">Shizuku 未能以监测所需的 shell 身份执行命令。请检查 Shizuku 的启动方式后重试。</string>
+    <string name="error_probe_start_command">探针启动命令失败。请重新启动监测。</string>
+    <string name="error_probe_start_no_reply">探针进程已出现，但未及时回应揪咪。请重新启动监测。</string>
     <string name="setup_step_root_title">授权 Root</string>
     <string name="setup_step_root_desc">请在 Root 管理器中允许揪咪。已有授权会自动检查。</string>
     <string name="setup_step_shizuku_run_title">启动 Shizuku</string>
@@ -853,6 +859,7 @@
     <string name="network_adb_verified">连接已验证，可以用系统 shell 身份启动监测。</string>
     <string name="network_adb_authorization_needed">此连接需要 Android 授权。继续后请在系统弹窗中点「允许」。</string>
     <string name="network_adb_unavailable">没找到可用的本机 ADB 端口。请确认端口已开启，再查找一次，或改用无线调试。</string>
+    <string name="network_adb_key_unavailable">揪咪无法读取或重建本机 ADB 密钥。请退出揪咪后重新连接。</string>
     <string name="network_adb_wrong_identity">这个端口没有提供启动监测所需的 Android shell 身份。</string>
     <string name="network_adb_checking">正在检查本机 ADB 连接…</string>
     <string name="network_adb_searching">检查中…</string>

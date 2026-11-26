@@ -9,7 +9,7 @@
 
 **[APK 다운로드](https://github.com/ybblab/Jiumi/releases/latest)** · [사용 가이드](https://jiumi.ybblab.com/en/download/) · [공식 웹사이트](https://jiumi.ybblab.com/en/)
 
-<sub>Android 11 이상 · APK 약 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 이상 · ARM64 · APK 약 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · **한국어** · [Español](README.es.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md) · [Português (Brasil)](README.pt-BR.md) · [Русский](README.ru.md)
 
@@ -108,7 +108,7 @@
 
 ## 다운로드 및 모니터링 시작
 
-1. Android 11 이상을 사용하는 휴대전화에서 [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest)의 APK를 다운로드해 설치합니다.
+1. Android 11 이상을 사용하는 ARM64 휴대전화에서 [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest)의 APK를 다운로드해 설치합니다.
 2. Jiumi를 처음 열 때 시작 방법을 선택합니다. 권장 방법인 무선 디버깅을 쓰려면 Wi-Fi에 연결하고 설정 안내에 따라 알림을 허용하고 개발자 옵션을 켭니다. Android가 표시하는 6자리 페어링 코드를 Jiumi 알림에 입력합니다. 알림에서 입력할 수 없다면 3단계에서 “Can’t type in the notification?”를 눌러 화면 분할, 작은 창 또는 빠른 설정 타일에서 코드를 입력합니다. ADB 포트가 이미 열려 있다면 네트워크 디버깅도 선택할 수 있습니다.
 3. **Monitor** 화면에서 **Start monitoring**을 누릅니다. 모니터링 중에는 상시 알림이 표시됩니다. 알림이나 앱에서 모니터링을 중지할 수 있습니다.
 
