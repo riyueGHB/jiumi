@@ -9,7 +9,7 @@ See what apps do in the foreground and background, then decide to keep, restrict
 
 **[Download APK](https://github.com/ybblab/Jiumi/releases/latest)** · [Guide](https://jiumi.ybblab.com/en/download/) · [Website](https://jiumi.ybblab.com/en/)
 
-<sub>Android 11 and later · APK about 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 and later · ARM64 · APK about 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
 
 [简体中文](../../README.md) · **English** · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md) · [Português (Brasil)](README.pt-BR.md) · [Русский](README.ru.md)
 
@@ -108,7 +108,7 @@ All four run the monitor as the shell user. Only root, or Shizuku started with r
 
 ## Download and start monitoring
 
-1. On a phone running Android 11 or later, download and install the APK from [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
+1. On an ARM64 phone running Android 11 or later, download and install the APK from [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
 2. Choose a launch method on first opening Jiumi. For wireless debugging, the recommended method, connect to Wi-Fi and follow the setup to allow notifications, turn on Developer options and enter the six-digit system pairing code in Jiumi's notification. If the notification can’t be used, tap “Can’t type in the notification?” in step 3 and enter the code in split screen, a small window or the Quick Settings tile instead. If an ADB port is already open, you can choose network debugging instead.
 3. Tap Start monitoring on the Monitor page. A persistent notification appears while monitoring is running. You can stop monitoring from the notification or the app.
 

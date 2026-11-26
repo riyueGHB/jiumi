@@ -9,7 +9,7 @@
 
 **[APK をダウンロード](https://github.com/ybblab/Jiumi/releases/latest)** · [ガイド](https://jiumi.ybblab.com/en/download/) · [ウェブサイト](https://jiumi.ybblab.com/en/)
 
-<sub>Android 11 以降 · APK 約 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 以降 · ARM64 · APK 約 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
 
 [简体中文](../../README.md) · [English](README.en.md) · **日本語** · [한국어](README.ko.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [हिन्दी](README.hi.md) · [Bahasa Indonesia](README.id.md) · [Português (Brasil)](README.pt-BR.md) · [Русский](README.ru.md)
 
@@ -108,7 +108,7 @@ Android は、アプリの実行に伴って権限アクセス記録、接続テ
 
 ## ダウンロードしてモニタリングを開始する
 
-1. Android 11 以降のスマートフォンで、[GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest) から APK をダウンロードしてインストールします。
+1. Android 11 以降の ARM64 スマートフォンで、[GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest) から APK をダウンロードしてインストールします。
 2. Jiumi を初めて開いたときに起動方法を選択します。推奨されるワイヤレスデバッグの場合は、Wi-Fi に接続し、セットアップに従って通知を許可し、開発者向けオプションをオンにして、Jiumi の通知にシステムの 6 桁のペアリングコードを入力します。通知から入力できない場合は、ステップ 3 で “Can’t type in the notification?” をタップし、分割画面、小さいウィンドウ、またはクイック設定タイルからコードを入力します。ADB ポートがすでに開いている場合は、ネットワークデバッグも選べます。
 3. Monitor ページで Start monitoring をタップします。モニタリング中は常駐通知が表示されます。モニタリングは通知またはアプリから停止できます。
 

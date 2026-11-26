@@ -31,6 +31,7 @@ fun AirPairingFailure.messageRes(): Int = when (this) {
     AirPairingFailure.ADB_IDENTITY_CHECK_FAILED -> R.string.settings_air_adb_identity_check_failed
     AirPairingFailure.ADB_IDENTITY_RESPONSE_MISSING ->
         R.string.settings_air_adb_identity_response_missing
+    AirPairingFailure.ADB_WRONG_IDENTITY -> R.string.settings_air_adb_wrong_identity
     AirPairingFailure.ADB_CONNECTION_FAILED -> R.string.settings_air_adb_connection_failed
     AirPairingFailure.ADB_ENDPOINT_NOT_FOUND -> R.string.settings_air_adb_endpoint_not_found
     AirPairingFailure.WIRELESS_DEBUGGING_OFF -> R.string.settings_air_wireless_debugging_off

@@ -9,7 +9,7 @@ Lihat apa yang dilakukan aplikasi di latar depan dan latar belakang, lalu putusk
 
 **[Unduh APK](https://github.com/ybblab/Jiumi/releases/latest)** · [Panduan](https://jiumi.ybblab.com/en/download/) · [Situs resmi](https://jiumi.ybblab.com/en/)
 
-<sub>Android 11 atau lebih baru · APK sekitar 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
+<sub>Android 11 atau lebih baru · ARM64 · APK sekitar 4 MB · <a href="../../LICENSE">Apache 2.0</a></sub>
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [हिन्दी](README.hi.md) · **Bahasa Indonesia** · [Português (Brasil)](README.pt-BR.md) · [Русский](README.ru.md)
 
@@ -108,7 +108,7 @@ Keempatnya menjalankan monitor sebagai pengguna shell. Hanya root, atau Shizuku 
 
 ## Mengunduh dan mulai memantau
 
-1. Pada ponsel dengan Android 11 atau lebih baru, unduh dan pasang APK dari [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
+1. Pada ponsel ARM64 dengan Android 11 atau lebih baru, unduh dan pasang APK dari [GitHub Releases](https://github.com/ybblab/Jiumi/releases/latest).
 2. Saat pertama membuka Jiumi, pilih metode untuk memulai. Jika menggunakan proses debug nirkabel, yaitu metode yang disarankan, sambungkan ke Wi-Fi dan ikuti panduan untuk mengizinkan notifikasi dan mengaktifkan opsi developer. Masukkan kode penyambungan enam digit yang ditampilkan sistem ke notifikasi Jiumi. Jika notifikasi tidak dapat digunakan, ketuk “Can’t type in the notification?” di langkah 3 lalu masukkan kode lewat layar terpisah, jendela kecil, atau kartu Setelan Cepat. Jika port ADB sudah terbuka, Anda juga dapat memilih proses debug jaringan.
 3. Ketuk **Start monitoring** pada halaman **Monitor**. Selama pemantauan berlangsung, notifikasi tetap muncul. Anda dapat menghentikan pemantauan dari notifikasi atau dari aplikasi.
 

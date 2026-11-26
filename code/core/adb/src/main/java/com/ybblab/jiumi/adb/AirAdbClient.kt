@@ -30,9 +30,7 @@ class AirAdbClient(
     private lateinit var outputStream: DataOutputStream
     private val nextLocalId = AtomicInteger(1)
     @Volatile private var connected = false
-    // The whole ADB socket is one shared connection. Concurrent shell() calls would interleave headers and payloads on the stream,
-    // so one command could read another's stdout (typically dumpsys output mixed into base64 output along with the
-    // __DROIDANCE_EXIT_ marker). This lock runs one shell() at a time so commands never interleave.
+    // Serialize streams on the shared socket so one command cannot consume another command's packets.
     private val shellLock = Any()
 
     fun connect() {
@@ -50,7 +48,7 @@ class AirAdbClient(
         inputStream = DataInputStream(tcpSocket.inputStream)
         outputStream = DataOutputStream(tcpSocket.outputStream)
 
-        writeMessage(A_CNXN, A_VERSION, A_MAXDATA, "host::".adbPayload())
+        writeMessage(A_CNXN, A_VERSION, A_MAXDATA, "host::features=shell_v2".adbPayload())
         var message = readMessage()
         if (requireTls && message.command != A_STLS) {
             throw IOException("Expected a Wireless debugging TLS port")
@@ -93,10 +91,7 @@ class AirAdbClient(
         connected = true
     }
 
-    fun shell(command: String, service: String = "shell"): String {
-        val bytes = requestService("$service:$command")
-        return if (service.split(',').contains("v2")) decodeShellV2(bytes) else bytes.toString(Charsets.UTF_8)
-    }
+    fun shell(command: String): AdbShellResult = decodeAdbShellV2(requestService("shell,v2,raw:$command"))
 
     fun restartUsb(): String = requestService("usb:").toString(Charsets.UTF_8)
 
@@ -121,7 +116,7 @@ class AirAdbClient(
                     writeMessage(A_OKAY, localId, message.arg0, null)
                 }
                 A_CLSE -> {
-                    check(accepted) { "ADB service refused: $destination" }
+                    check(accepted) { "ADB service refused: ${destination.substringBefore(':')}" }
                     writeMessage(A_CLSE, localId, message.arg0, null)
                     return output.toByteArray()
                 }
@@ -129,25 +124,6 @@ class AirAdbClient(
             }
         }
         @Suppress("UNREACHABLE_CODE") byteArrayOf()
-    }
-
-    /** shell,v2 wraps stdout/stderr in binary frames, even for a single PID line. */
-    private fun decodeShellV2(bytes: ByteArray): String {
-        val frames = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-        val output = ByteArrayOutputStream()
-        while (frames.hasRemaining()) {
-            check(frames.remaining() >= 5) { "Truncated ADB shell v2 header" }
-            val stream = frames.get().toInt() and 255
-            val length = frames.int
-            check(length >= 0 && length <= frames.remaining()) { "Invalid ADB shell v2 payload length" }
-            val payload = ByteArray(length).also { frames.get(it) }
-            when (stream) {
-                1, 2 -> output.write(payload)
-                3 -> Unit // Exit status is a control frame, never command output.
-                else -> error("Unexpected ADB shell v2 stream: $stream")
-            }
-        }
-        return output.toString(Charsets.UTF_8.name())
     }
 
     private fun authenticate(firstAuth: AdbMessage): AdbMessage {
@@ -259,4 +235,36 @@ class AirAdbClient(
             return sum
         }
     }
+}
+
+/** Output and exit code from a completed ADB shell command. */
+data class AdbShellResult(val output: String, val exitCode: Int) {
+    internal val uid: Int? get() = output.trim().toIntOrNull()?.takeIf { exitCode == 0 && it >= 0 }
+
+    internal companion object {
+        const val ANDROID_SHELL_UID = 2000
+    }
+}
+
+internal fun decodeAdbShellV2(bytes: ByteArray): AdbShellResult {
+    val frames = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+    val output = ByteArrayOutputStream()
+    while (frames.hasRemaining()) {
+        check(frames.remaining() >= 5) { "Truncated ADB shell v2 header" }
+        val stream = frames.get().toInt() and 255
+        val length = frames.int
+        check(length in 0..frames.remaining()) { "Invalid ADB shell v2 payload length" }
+        when (stream) {
+            1, 2 -> {
+                output.write(bytes, frames.position(), length)
+                frames.position(frames.position() + length)
+            }
+            3 -> {
+                check(length == 1 && frames.remaining() == 1) { "Invalid ADB shell v2 exit frame" }
+                return AdbShellResult(output.toString(Charsets.UTF_8.name()), frames.get().toInt() and 255)
+            }
+            else -> error("Unexpected ADB shell v2 stream: $stream")
+        }
+    }
+    error("Missing ADB shell v2 exit frame")
 }

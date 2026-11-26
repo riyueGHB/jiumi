@@ -80,6 +80,8 @@ import com.ybblab.jiumi.MonitorController.Problem
 import com.ybblab.jiumi.MonitorController.Range
 import com.ybblab.jiumi.access.RootShell
 import com.ybblab.jiumi.R
+import com.ybblab.jiumi.access.unavailable
+import com.ybblab.jiumi.startProblem
 import com.ybblab.jiumi.adb.AirModePairingManager.PairingState
 import com.ybblab.jiumi.adb.AirModePairingManager.PairingTrustState
 import com.ybblab.jiumi.adb.messageRes
@@ -848,7 +850,9 @@ fun statusMessage(state: MonitorController.UiState): String? {
     val failure = state.pairingFailure?.takeIf { state.method == com.ybblab.jiumi.access.AccessMethod.WIRELESS }
         ?.let { stringResource(it.messageRes()) }
     return when (val p = state.problem) {
-        null -> failure
+        null -> if (state.method == com.ybblab.jiumi.access.AccessMethod.SHIZUKU && (state.shizuku.installed || state.shizuku.running) && !state.running) {
+            state.shizuku.unavailable?.startProblem()?.let { problemText(it) }
+        } else failure
         Problem.CONNECT -> failure ?: problemText(p)
         else -> problemText(p)
     }
@@ -859,12 +863,19 @@ private fun problemText(problem: Problem): String = stringResource(
     when (problem) {
         Problem.CONNECT -> R.string.error_connect
         Problem.START -> R.string.error_service_start
+        Problem.START_COMMAND -> R.string.error_probe_start_command
+        Problem.START_NO_REPLY -> R.string.error_probe_start_no_reply
         Problem.STOP -> R.string.error_service_stop
         Problem.STOP_PARTIAL -> R.string.error_service_stop_partial
-        Problem.SHIZUKU -> R.string.error_shizuku
+        Problem.SHIZUKU_CONNECTION -> R.string.error_shizuku_connection
+        Problem.SHIZUKU_AUTHORIZATION -> R.string.error_shizuku_authorization
+        Problem.SHIZUKU_UNSUPPORTED -> R.string.error_shizuku_unsupported
+        Problem.SHIZUKU_SERVICE -> R.string.error_shizuku_service
+        Problem.SHIZUKU_SHELL -> R.string.error_shizuku_shell
         Problem.NETWORK_UNAVAILABLE -> R.string.network_adb_unavailable
         Problem.NETWORK_AUTHORIZATION -> R.string.network_adb_authorization_needed
         Problem.NETWORK_IDENTITY -> R.string.network_adb_wrong_identity
+        Problem.NETWORK_KEY -> R.string.network_adb_key_unavailable
     }
 )
 

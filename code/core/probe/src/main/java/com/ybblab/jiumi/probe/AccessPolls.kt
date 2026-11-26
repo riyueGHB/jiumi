@@ -4,9 +4,8 @@
 package com.ybblab.jiumi.probe
 
 /**
- * Accesses read from successive AppOps snapshots, for releases whose shell may not watch other apps
- * (Android 11 grants it no WATCH_APPOPS, so the system reports only the shell's own accesses to its
- * watchers). Each snapshot keeps, per app, operation and attribution tag, the time of the latest
+ * Accesses read from successive AppOps snapshots when a watcher cannot observe other apps.
+ * Each snapshot keeps, per app, operation and attribution tag, the time of the latest
  * access and refusal, so a newer time than the last snapshot's is at least one access at that time.
  * Several accesses between two snapshots show as their latest one: fewer, never invented.
  *
@@ -16,7 +15,11 @@ package com.ybblab.jiumi.probe
  * AppOps marks it running, or, if it began and ended between two snapshots, from its start for its
  * recorded duration.
  */
-internal class AccessPolls(private val since: Long) {
+internal class AccessPolls(
+    private val since: Long,
+    private val includeNoted: Boolean = true,
+    private val includeActive: Boolean = true
+) {
     /** One snapshot entry; times are wall-clock milliseconds, 0 or less when there is none. */
     data class Entry(
         val op: String, val uid: Int, val pkg: String?, val attr: String?,
@@ -84,6 +87,9 @@ internal class AccessPolls(private val since: Long) {
         for (key in gone) {
             if (running.remove(key) == true) out += Event.Active(key.op, key.uid, key.pkg, key.attr, false, now)
         }
+        // Keep the listener that registered successfully as the source for its events.
+        if (!includeNoted) out.removeAll { it is Event.Noted }
+        if (!includeActive) out.removeAll { it is Event.Active }
         out.sortBy { it.t }
         return out
     }

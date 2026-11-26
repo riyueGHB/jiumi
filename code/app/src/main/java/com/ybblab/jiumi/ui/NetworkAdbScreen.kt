@@ -132,5 +132,6 @@ internal fun networkAdbProblem(result: NetworkAdb.Result?): Int? = when (result)
     is NetworkAdb.Result.NeedsAuthorization -> R.string.network_adb_authorization_needed
     NetworkAdb.Result.Unavailable -> R.string.network_adb_unavailable
     NetworkAdb.Result.WrongIdentity -> R.string.network_adb_wrong_identity
+    NetworkAdb.Result.KeyUnavailable -> R.string.network_adb_key_unavailable
     is NetworkAdb.Result.Ready, null -> null
 }

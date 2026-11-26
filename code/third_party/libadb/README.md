@@ -1,6 +1,6 @@
 # Wireless ADB pairing JNI source recipe
 
-The application packages one `core/adb/src/main/jniLibs/<ABI>/libadb.so` for each of `arm64-v8a`, `armeabi-v7a` and `x86_64`. These checked-in inputs are built by this recipe; Gradle does not download or rebuild them during normal application builds.
+The Android APK targets `arm64-v8a`. This recipe builds the checked-in `core/adb/src/main/jniLibs/arm64-v8a/libadb.so`. Gradle uses that library during normal application builds.
 
 `source.lock.json` fixes official source archives, their commits, byte sizes and SHA-256 digests. The JNI implementation is the unchanged `adb_pairing.cpp` from Shizuku commit `2650830c5b099ae0dd34fedf614d4f592ca05d65` (v13.6.0). BoringSSL commit `571a7432a19592c620fa316abde47770dad4f82b` is the upstream source pinned by the BoringSSL Android `20250114` dependency used by that Shizuku revision. The crypto library is compiled locally from this source; no BoringSSL AAR or separately packaged crypto runtime is used.
 
@@ -23,7 +23,7 @@ python3 third_party/libadb/build_android.py \
 
 Choose a fresh output directory. Downloads are checked before extraction; source archives and caches reject traversal, symlinks and unexpected files. Every run rechecks cached source bytes, clears the ABI build directories, and removes ambient compiler/linker overrides from the build environment. Build products stay outside the source checkout. `receipt.json` records the commands, actual host tool hashes, source identities, output hashes, dynamic symbols and ELF program headers. The output directory is published after all ABIs and license assets pass validation.
 
-The candidate contains `jniLibs/`, `assets/licenses/libadb/`, `provenance.json` and the full build receipt. After reviewing and testing an update, replace the three existing packaged libraries, the corresponding license asset directory, and this directory's `provenance.json` together. Keep the full receipt with the validation artifacts. Do not add a second JNI packaging source. Host-specific output hashes may differ; the recipe does not claim cross-host byte reproducibility.
+The candidate contains `jniLibs/`, `assets/licenses/libadb/`, `provenance.json` and the full build receipt. After reviewing and testing an update, replace the packaged library, the corresponding license assets, and this directory's `provenance.json` together. Keep the full receipt with the validation artifacts. Do not add a second JNI packaging source. Host-specific output hashes may differ; the recipe does not claim cross-host byte reproducibility.
 
 ## Licenses
 

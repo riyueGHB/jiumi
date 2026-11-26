@@ -255,12 +255,11 @@ fun SetupScreen(
                                         color = StatusWarning, modifier = Modifier.padding(top = 8.dp))
                                 }
                             }
-                            if (!paired && method == com.ybblab.jiumi.access.AccessMethod.SHIZUKU && i == current &&
-                                (state.problem == MonitorController.Problem.SHIZUKU ||
-                                    (i == 0 && shizuku.running && (!shizuku.supportedVersion || !shizuku.usableIdentity)) ||
-                                    (i == 1 && shizuku.permissionBlocked))) {
-                                Text(stringResource(R.string.error_shizuku), style = MaterialTheme.typography.bodySmall,
-                                    color = StatusWarning, modifier = Modifier.padding(top = 8.dp))
+                            if (!paired && method == com.ybblab.jiumi.access.AccessMethod.SHIZUKU && i == current) {
+                                statusMessage(state)?.let { message ->
+                                    Text(message, style = MaterialTheme.typography.bodySmall,
+                                        color = StatusWarning, modifier = Modifier.padding(top = 8.dp))
+                                }
                             }
                             if (i == steps.lastIndex && method == com.ybblab.jiumi.access.AccessMethod.WIRELESS) state.pairingFailure?.let {
                                 Text(stringResource(it.messageRes()), style = MaterialTheme.typography.bodySmall,
