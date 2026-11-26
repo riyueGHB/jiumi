@@ -24,8 +24,8 @@ android {
         minSdk = 30
         targetSdk = 35
         ndk { abiFilters += "arm64-v8a" }
-        versionCode = 13
-        versionName = "0.7.0"
+        versionCode = 14
+        versionName = "0.7.1"
         buildConfigField("String", "REPOSITORY", "\"$repository\"")
         externalNativeBuild { cmake { targets += "jiumi_shell" } }
     }

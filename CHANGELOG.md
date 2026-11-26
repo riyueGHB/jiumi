@@ -4,13 +4,11 @@ Notable changes to Jiumi, newest first. The English in-app update notes come fro
 Chinese in-app notes are supplied when preparing the release.
 Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.7.1] - 2026-11-27
 
-### Fixed
-
-- Shizuku monitoring now identifies where startup failed, including connection, authorization, the helper service, and the monitor's response.
-- Wireless and Network debugging now report when the monitor launch command fails. Wireless debugging checks for the Android shell identity before starting the monitor.
-- If an AppOps listener cannot start, Jiumi reads system records for the affected events.
+- Improved Shizuku startup messages. Jiumi identifies failures in the connection, authorization, helper service, or monitor startup.
+- Wireless debugging verifies the Android shell identity before starting the monitor. Both Wireless and Network debugging distinguish a launch command failure from a monitor that does not respond.
+- When an AppOps listener fails to register, Jiumi reads the affected system records periodically to reduce missed activity.
 - Network debugging can recover an unreadable local ADB key and reports a key error if recovery fails.
 - The APK now requires a 64-bit ARM device running Android 11 or later.
 
